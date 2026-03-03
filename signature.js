@@ -318,67 +318,80 @@ async function renderPDFPreview() {
     initDrag();
 }
 
-// ─── Drag & Resize Signature Overlay ───────────────────────────
-function initDrag() {
+// ─── Drag & Resize — stable module-level state ─────────────────
+const drag = { mode: null, startX: 0, startY: 0, startL: 0, startT: 0, startW: 0 };
+
+function _dragStart(e, mode) {
+    const src = e.touches ? e.touches[0] : e;
+    const overlay = document.getElementById('signatureOverlay');
+    drag.mode   = mode;
+    drag.startX = src.clientX;
+    drag.startY = src.clientY;
+    drag.startL = overlay.offsetLeft;
+    drag.startT = overlay.offsetTop;
+    drag.startW = overlay.offsetWidth;
+    e.preventDefault();
+    e.stopPropagation();
+}
+
+function _onOverlayDown(e) {
+    if (e.target.id === 'resizeHandle') return;
+    _dragStart(e, 'drag');
+}
+
+function _onHandleDown(e) {
+    _dragStart(e, 'resize');
+}
+
+function _onDragMove(e) {
+    if (!drag.mode) return;
+    e.preventDefault();
+    const src       = e.touches ? e.touches[0] : e;
+    const dx        = src.clientX - drag.startX;
+    const dy        = src.clientY - drag.startY;
     const overlay   = document.getElementById('signatureOverlay');
     const container = document.getElementById('pdfPreviewContainer');
-    const handle    = document.getElementById('resizeHandle');
 
-    let mode = null; // 'drag' | 'resize'
-    let startX, startY, startL, startT, startW;
-
-    function onStart(e, m) {
-        mode   = m;
-        const src = e.touches ? e.touches[0] : e;
-        startX = src.clientX;
-        startY = src.clientY;
-        startL = overlay.offsetLeft;
-        startT = overlay.offsetTop;
-        startW = overlay.offsetWidth;
-        e.preventDefault();
-        e.stopPropagation();
+    if (drag.mode === 'drag') {
+        const maxL = Math.max(0, container.clientWidth  - overlay.offsetWidth);
+        const maxT = Math.max(0, container.clientHeight - overlay.offsetHeight);
+        const newL = Math.max(0, Math.min(drag.startL + dx, maxL));
+        const newT = Math.max(0, Math.min(drag.startT + dy, maxT));
+        overlay.style.left = newL + 'px';
+        overlay.style.top  = newT + 'px';
+        state.sigPos = { x: newL, y: newT };
+    } else {
+        const newW = Math.max(40, Math.min(drag.startW + dx, 600));
+        overlay.style.width = newW + 'px';
+        state.sigWidth = newW;
+        document.getElementById('sigSize').value = Math.round(newW);
+        document.getElementById('sigSizeLabel').textContent = Math.round(newW) + 'px';
     }
+    updatePosDisplay();
+}
 
-    function onMove(e) {
-        if (!mode) return;
-        const src = e.touches ? e.touches[0] : e;
-        const dx  = src.clientX - startX;
-        const dy  = src.clientY - startY;
+function _onDragEnd() { drag.mode = null; }
 
-        if (mode === 'drag') {
-            const newL = Math.max(0, Math.min(startL + dx, container.clientWidth  - overlay.clientWidth));
-            const newT = Math.max(0, Math.min(startT + dy, container.clientHeight - overlay.clientHeight));
-            overlay.style.left = newL + 'px';
-            overlay.style.top  = newT + 'px';
-            state.sigPos = { x: newL, y: newT };
-        } else {
-            const newW = Math.max(40, Math.min(startW + dx, 500));
-            overlay.style.width = newW + 'px';
-            state.sigWidth = newW;
-            document.getElementById('sigSize').value = newW;
-            document.getElementById('sigSizeLabel').textContent = newW + 'px';
-        }
-        updatePosDisplay();
-        e.preventDefault();
-    }
+// Attach global move/end once at module load
+document.addEventListener('mousemove', _onDragMove);
+document.addEventListener('mouseup',   _onDragEnd);
+document.addEventListener('touchmove', _onDragMove, { passive: false });
+document.addEventListener('touchend',  _onDragEnd);
 
-    function onEnd() { mode = null; }
+function initDrag() {
+    // Re-bind overlay & handle listeners (removing first to prevent duplicates)
+    const overlay = document.getElementById('signatureOverlay');
+    const handle  = document.getElementById('resizeHandle');
 
-    // Remove old listeners by cloning nodes
-    const newOverlay = overlay.cloneNode(true);
-    overlay.parentNode.replaceChild(newOverlay, overlay);
-    const newHandle = newOverlay.querySelector('#resizeHandle');
-    newOverlay.querySelector('img').src = state.signatureDataUrl;
+    overlay.removeEventListener('mousedown',  _onOverlayDown);
+    overlay.removeEventListener('touchstart', _onOverlayDown);
+    handle.removeEventListener('mousedown',   _onHandleDown);
+    handle.removeEventListener('touchstart',  _onHandleDown);
 
-    newOverlay.addEventListener('mousedown',  (e) => { if (e.target !== newHandle) onStart(e, 'drag'); });
-    newOverlay.addEventListener('touchstart', (e) => { if (e.target !== newHandle) onStart(e, 'drag'); }, { passive: false });
-    newHandle.addEventListener('mousedown',   (e) => onStart(e, 'resize'));
-    newHandle.addEventListener('touchstart',  (e) => onStart(e, 'resize'), { passive: false });
-
-    document.addEventListener('mousemove',  onMove);
-    document.addEventListener('mouseup',    onEnd);
-    document.addEventListener('touchmove',  onMove, { passive: false });
-    document.addEventListener('touchend',   onEnd);
+    overlay.addEventListener('mousedown',  _onOverlayDown);
+    overlay.addEventListener('touchstart', _onOverlayDown, { passive: false });
+    handle.addEventListener('mousedown',   _onHandleDown);
+    handle.addEventListener('touchstart',  _onHandleDown, { passive: false });
 }
 
 function updatePosDisplay() {
