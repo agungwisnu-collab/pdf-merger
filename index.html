@@ -5,7 +5,10 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>PDF Merger - Gratis</title>
     <link rel="stylesheet" href="style.css">
+    <!-- pdf-lib: merge engine -->
     <script src="https://unpkg.com/pdf-lib@1.17.1/dist/pdf-lib.min.js"></script>
+    <!-- PDF.js: thumbnail & page count -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
 </head>
 <body>
     <div class="container">
@@ -34,6 +37,15 @@
             </div>
             <p class="drag-hint">💡 Drag file untuk mengubah urutan</p>
             <ul id="fileList"></ul>
+        </div>
+
+        <!-- Output Filename -->
+        <div id="outputSection" class="output-section hidden">
+            <label for="outputName">💾 Nama file output:</label>
+            <div class="output-input-row">
+                <input type="text" id="outputName" class="output-input" placeholder="nama_file_output" value="merged_output" />
+                <span class="output-ext">.pdf</span>
+            </div>
         </div>
 
         <!-- Action Buttons -->
