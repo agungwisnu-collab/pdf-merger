@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PDF Merger - Gratis</title>
+    <link rel="stylesheet" href="style.css">
+    <script src="https://unpkg.com/pdf-lib@1.17.1/dist/pdf-lib.min.js"></script>
+</head>
+<body>
+    <div class="container">
+        <!-- Header -->
+        <div class="header">
+            <h1>📄 PDF Merger</h1>
+            <p>Gabungkan beberapa PDF menjadi satu — gratis, cepat, dan aman.<br>File <strong>tidak dikirim ke server</strong>, semua proses di browser kamu.</p>
+        </div>
+
+        <!-- Upload Area -->
+        <div class="upload-area" id="dropZone">
+            <div class="upload-icon">⬆️</div>
+            <p class="upload-title">Drag & Drop file PDF di sini</p>
+            <p class="upload-sub">atau</p>
+            <input type="file" id="fileInput" multiple accept=".pdf" hidden>
+            <button class="btn btn-primary" onclick="document.getElementById('fileInput').click()">
+                Pilih File PDF
+            </button>
+        </div>
+
+        <!-- File List -->
+        <div id="fileSection" class="file-section hidden">
+            <div class="file-section-header">
+                <h3>📋 File yang Dipilih (<span id="fileCount">0</span>)</h3>
+                <button class="btn btn-danger-outline" onclick="clearAll()">🗑️ Hapus Semua</button>
+            </div>
+            <p class="drag-hint">💡 Drag file untuk mengubah urutan</p>
+            <ul id="fileList"></ul>
+        </div>
+
+        <!-- Action Buttons -->
+        <div class="action-row">
+            <button class="btn btn-secondary" onclick="document.getElementById('fileInput').click()">
+                ➕ Tambah File
+            </button>
+            <button class="btn btn-success" id="mergeBtn" onclick="mergePDFs()" disabled>
+                🔗 Gabungkan PDF
+            </button>
+        </div>
+
+        <!-- Progress -->
+        <div id="progressSection" class="hidden">
+            <div class="progress-bar-track">
+                <div class="progress-bar-fill" id="progressBar" style="width: 0%"></div>
+            </div>
+            <p id="progressText" class="progress-text">Memproses...</p>
+        </div>
+
+        <!-- Status -->
+        <div id="statusBox" class="status-box hidden"></div>
+
+        <!-- Footer -->
+        <div class="footer">
+            <p>🔒 100% Aman · 🆓 Gratis · ⚡ Cepat · Tidak perlu login</p>
+        </div>
+    </div>
+
+    <script src="app.js"></script>
+</body>
+</html>

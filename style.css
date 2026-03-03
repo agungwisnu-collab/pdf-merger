@@ -1,0 +1,286 @@
+/* ==================== RESET & BASE ==================== */
+*, *::before, *::after {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+}
+
+body {
+    font-family: 'Segoe UI', Arial, sans-serif;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    min-height: 100vh;
+    display: flex;
+    justify-content: center;
+    align-items: flex-start;
+    padding: 40px 16px;
+}
+
+/* ==================== CONTAINER ==================== */
+.container {
+    background: #ffffff;
+    border-radius: 16px;
+    padding: 36px 32px;
+    width: 100%;
+    max-width: 640px;
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.2);
+}
+
+/* ==================== HEADER ==================== */
+.header {
+    text-align: center;
+    margin-bottom: 28px;
+}
+
+.header h1 {
+    font-size: 2rem;
+    color: #2d3748;
+    margin-bottom: 8px;
+}
+
+.header p {
+    color: #718096;
+    font-size: 0.95rem;
+    line-height: 1.6;
+}
+
+/* ==================== UPLOAD AREA ==================== */
+.upload-area {
+    border: 2.5px dashed #a0aec0;
+    border-radius: 12px;
+    padding: 48px 24px;
+    text-align: center;
+    cursor: pointer;
+    transition: all 0.25s ease;
+    background: #f7fafc;
+}
+
+.upload-area:hover {
+    border-color: #667eea;
+    background: #ebf4ff;
+}
+
+.upload-area.dragover {
+    border-color: #667eea;
+    background: #ebf4ff;
+    transform: scale(1.01);
+}
+
+.upload-icon {
+    font-size: 2.5rem;
+    margin-bottom: 12px;
+}
+
+.upload-title {
+    font-size: 1.1rem;
+    font-weight: 600;
+    color: #2d3748;
+    margin-bottom: 6px;
+}
+
+.upload-sub {
+    color: #a0aec0;
+    font-size: 0.9rem;
+    margin-bottom: 16px;
+}
+
+/* ==================== BUTTONS ==================== */
+.btn {
+    padding: 10px 20px;
+    border: none;
+    border-radius: 8px;
+    font-size: 0.95rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.btn:active { transform: scale(0.97); }
+
+.btn-primary {
+    background: #667eea;
+    color: white;
+}
+.btn-primary:hover { background: #5a6fd6; }
+
+.btn-secondary {
+    background: #edf2f7;
+    color: #4a5568;
+}
+.btn-secondary:hover { background: #e2e8f0; }
+
+.btn-success {
+    background: #48bb78;
+    color: white;
+    flex: 1;
+}
+.btn-success:hover:not(:disabled) { background: #38a169; }
+.btn-success:disabled {
+    background: #cbd5e0;
+    cursor: not-allowed;
+    transform: none;
+}
+
+.btn-danger-outline {
+    background: transparent;
+    color: #e53e3e;
+    border: 1.5px solid #e53e3e;
+    font-size: 0.85rem;
+    padding: 6px 14px;
+}
+.btn-danger-outline:hover {
+    background: #fff5f5;
+}
+
+/* ==================== FILE SECTION ==================== */
+.file-section {
+    margin-top: 24px;
+}
+
+.file-section-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 6px;
+}
+
+.file-section-header h3 {
+    font-size: 1rem;
+    color: #2d3748;
+}
+
+.drag-hint {
+    font-size: 0.8rem;
+    color: #a0aec0;
+    margin-bottom: 10px;
+}
+
+/* ==================== FILE LIST ==================== */
+#fileList {
+    list-style: none;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+#fileList li {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 14px;
+    background: #f7fafc;
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+    cursor: grab;
+    transition: background 0.2s;
+    user-select: none;
+}
+
+#fileList li:hover { background: #edf2f7; }
+#fileList li.dragging { opacity: 0.4; }
+#fileList li.drag-over { border: 2px dashed #667eea; background: #ebf4ff; }
+
+.file-icon { font-size: 1.3rem; }
+
+.file-info {
+    flex: 1;
+    min-width: 0;
+}
+
+.file-name {
+    font-weight: 600;
+    color: #2d3748;
+    font-size: 0.9rem;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.file-size {
+    color: #a0aec0;
+    font-size: 0.78rem;
+}
+
+.drag-handle {
+    color: #a0aec0;
+    font-size: 1.1rem;
+    cursor: grab;
+}
+
+.remove-btn {
+    background: none;
+    border: none;
+    color: #fc8181;
+    font-size: 1.1rem;
+    cursor: pointer;
+    padding: 2px 6px;
+    border-radius: 4px;
+    transition: background 0.2s;
+}
+.remove-btn:hover { background: #fff5f5; }
+
+/* ==================== ACTION ROW ==================== */
+.action-row {
+    display: flex;
+    gap: 12px;
+    margin-top: 24px;
+}
+
+.action-row .btn-secondary { flex-shrink: 0; }
+
+/* ==================== PROGRESS ==================== */
+.progress-bar-track {
+    background: #edf2f7;
+    border-radius: 99px;
+    height: 10px;
+    margin-top: 20px;
+    overflow: hidden;
+}
+
+.progress-bar-fill {
+    height: 100%;
+    background: linear-gradient(90deg, #667eea, #764ba2);
+    border-radius: 99px;
+    transition: width 0.3s ease;
+}
+
+.progress-text {
+    text-align: center;
+    font-size: 0.85rem;
+    color: #718096;
+    margin-top: 6px;
+}
+
+/* ==================== STATUS BOX ==================== */
+.status-box {
+    margin-top: 16px;
+    padding: 14px 18px;
+    border-radius: 8px;
+    font-weight: 600;
+    text-align: center;
+    font-size: 0.95rem;
+}
+
+.status-box.success {
+    background: #f0fff4;
+    color: #276749;
+    border: 1px solid #9ae6b4;
+}
+
+.status-box.error {
+    background: #fff5f5;
+    color: #9b2c2c;
+    border: 1px solid #feb2b2;
+}
+
+/* ==================== FOOTER ==================== */
+.footer {
+    text-align: center;
+    margin-top: 28px;
+    padding-top: 16px;
+    border-top: 1px solid #e2e8f0;
+    color: #a0aec0;
+    font-size: 0.82rem;
+}
+
+/* ==================== UTILITY ==================== */
+.hidden { display: none !important; }
