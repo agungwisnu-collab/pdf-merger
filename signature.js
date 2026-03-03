@@ -476,13 +476,99 @@ async function applySignatureAndDownload() {
         setTimeout(() => URL.revokeObjectURL(url), 10000);
 
         statusBox.className = 'status-box success';
-        statusBox.textContent = `✅ "${name}" berhasil ditandatangani & didownload!`;
+        statusBox.innerHTML = `
+            <div>✅ <strong>"${name}"</strong> berhasil ditandatangani &amp; didownload!</div>
+            <button class="btn btn-secondary btn-sm reset-form-btn" onclick="resetForm()">
+                🔄 Tanda Tangani PDF Lain
+            </button>
+        `;
 
     } catch (err) {
         statusBox.className = 'status-box error';
         statusBox.textContent = '❌ Error: ' + err.message;
         console.error(err);
     }
+}
+
+// ─── Reset Form ─────────────────────────────────────────────────
+function resetForm() {
+    // Reset state
+    state.pdfFile         = null;
+    state.pdfJsDoc        = null;
+    state.totalPages      = 0;
+    state.selectedPage    = 1;
+    state.signatureDataUrl = null;
+    state.activeTab       = 'draw';
+    state.sigPos          = { x: 50, y: 50 };
+    state.sigWidth        = 150;
+
+    // Reset upload area
+    document.getElementById('uploadedFile').classList.add('hidden');
+    document.getElementById('dropZone').classList.remove('hidden');
+    document.getElementById('pdfInput').value = '';
+
+    // Reset page selector
+    document.getElementById('pageSelector').innerHTML =
+        '<p class="placeholder-text">Upload PDF terlebih dahulu</p>';
+
+    // Reset drawing canvas
+    hasDrawn = false;
+    if (drawCtx && drawCanvas) {
+        drawCtx.clearRect(0, 0, drawCanvas.width, drawCanvas.height);
+    }
+    document.getElementById('canvasHint')?.classList.remove('hidden');
+
+    // Reset type tab
+    document.getElementById('typeInput').value = '';
+    const typeCanvas = document.getElementById('typeCanvas');
+    typeCanvas.getContext('2d').clearRect(0, 0, typeCanvas.width, typeCanvas.height);
+
+    // Reset upload tab
+    const uploadCanvas = document.getElementById('uploadCanvas');
+    uploadCanvas.getContext('2d').clearRect(0, 0, uploadCanvas.width, uploadCanvas.height);
+    uploadCanvas.classList.add('hidden');
+    document.getElementById('sigImageInput').value = '';
+
+    // Reset tabs UI back to 'draw'
+    document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+    document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+    document.getElementById('tabBtnDraw').classList.add('active');
+    document.getElementById('tabDraw').classList.add('active');
+
+    // Reset use-signature button
+    document.getElementById('useSignatureBtn').disabled = true;
+
+    // Reset signature overlay
+    const overlay = document.getElementById('signatureOverlay');
+    overlay.classList.add('hidden');
+    overlay.style.left  = '50px';
+    overlay.style.top   = '50px';
+    overlay.style.width = '150px';
+    document.getElementById('signaturePreview').src = '';
+
+    // Reset size slider
+    document.getElementById('sigSize').value = 150;
+    document.getElementById('sigSizeLabel').textContent = '150px';
+
+    // Reset output name
+    document.getElementById('outputName').value = 'signed_document';
+
+    // Reset status box
+    const statusBox = document.getElementById('downloadStatus');
+    statusBox.className = 'status-box hidden';
+    statusBox.innerHTML = '';
+
+    // Reset position display
+    document.getElementById('posX').textContent = '50';
+    document.getElementById('posY').textContent = '50';
+    document.getElementById('posW').textContent = '150';
+    document.getElementById('currentPageInfo').textContent = '-';
+
+    // Disable steps 2-5
+    ['stepPage','stepSign','stepPosition','stepDownload'].forEach(disableStep);
+
+    // Scroll ke atas
+    document.getElementById('stepUpload').scrollIntoView({ behavior: 'smooth', block: 'start' });
 }
 
 // ─── Helpers ────────────────────────────────────────────────────

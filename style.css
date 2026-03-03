@@ -264,6 +264,7 @@ body {
     background: #f0fff4;
     color: #276749;
     border: 1px solid #9ae6b4;
+    text-align: center;
 }
 
 .status-box.error {
