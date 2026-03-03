@@ -1,0 +1,387 @@
+/* ============================================================
+   signature.css — Styles for PDF Signature page
+   ============================================================ */
+
+/* ── Container override ── */
+.sig-container {
+    max-width: 700px;
+}
+
+/* ── Step Cards ── */
+.step-card {
+    background: white;
+    border-radius: 12px;
+    padding: 24px 26px;
+    margin-bottom: 20px;
+    box-shadow: 0 2px 14px rgba(0, 0, 0, 0.07);
+    transition: opacity 0.3s, filter 0.3s;
+}
+
+.step-disabled {
+    opacity: 0.45;
+    pointer-events: none;
+    user-select: none;
+}
+
+.step-header {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 18px;
+}
+
+.step-header h2 {
+    font-size: 1.05rem;
+    color: #2d3748;
+    margin: 0;
+}
+
+.step-number {
+    width: 30px;
+    height: 30px;
+    background: #667eea;
+    color: white;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 700;
+    font-size: 0.85rem;
+    flex-shrink: 0;
+}
+
+/* ── Uploaded file bar ── */
+.uploaded-file {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 10px 14px;
+    background: #f0f7ff;
+    border: 1px solid #c3dafe;
+    border-radius: 8px;
+    margin-top: 12px;
+    font-size: 0.9rem;
+    color: #2d3748;
+    font-weight: 600;
+}
+
+/* ── Page Selector ── */
+.page-selector {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+}
+
+.placeholder-text {
+    color: #a0aec0;
+    font-size: 0.9rem;
+    font-style: italic;
+    padding: 12px 0;
+}
+
+.page-thumb-item {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 5px;
+    padding: 8px;
+    border-radius: 8px;
+    border: 2px solid transparent;
+    cursor: pointer;
+    transition: all 0.2s;
+    background: #f7fafc;
+}
+
+.page-thumb-item:hover {
+    border-color: #667eea;
+    background: #ebf4ff;
+}
+
+.page-thumb-item.selected {
+    border-color: #667eea;
+    background: #ebf4ff;
+}
+
+.page-thumb-item canvas {
+    border: 1px solid #e2e8f0;
+    border-radius: 3px;
+    display: block;
+}
+
+.page-thumb-item span {
+    font-size: 0.75rem;
+    color: #4a5568;
+    font-weight: 600;
+}
+
+/* ── Tabs ── */
+.tab-group {
+    display: flex;
+    gap: 4px;
+    background: #f0f2f5;
+    padding: 4px;
+    border-radius: 10px;
+    margin-bottom: 16px;
+}
+
+.tab-btn {
+    flex: 1;
+    padding: 9px;
+    border: none;
+    background: transparent;
+    border-radius: 7px;
+    cursor: pointer;
+    font-size: 0.88rem;
+    font-weight: 600;
+    color: #718096;
+    transition: all 0.2s;
+}
+
+.tab-btn.active {
+    background: white;
+    color: #667eea;
+    box-shadow: 0 1px 6px rgba(0, 0, 0, 0.1);
+}
+
+.tab-content { display: none; }
+.tab-content.active { display: block; }
+
+/* ── Drawing Canvas ── */
+.canvas-wrapper {
+    position: relative;
+    border: 2px solid #e2e8f0;
+    border-radius: 10px;
+    overflow: hidden;
+    background: white;
+    cursor: crosshair;
+    touch-action: none;
+}
+
+#signatureCanvas {
+    display: block;
+    width: 100%;
+    height: 180px;
+}
+
+.canvas-hint {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    color: #cbd5e0;
+    font-size: 0.9rem;
+    pointer-events: none;
+    transition: opacity 0.2s;
+    white-space: nowrap;
+}
+
+.canvas-hint.hidden { opacity: 0; }
+
+.canvas-controls {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-top: 10px;
+    flex-wrap: wrap;
+    font-size: 0.85rem;
+    color: #4a5568;
+}
+
+/* ── Type Signature ── */
+.type-wrapper {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.type-text-input {
+    padding: 10px 14px;
+    border: 2px solid #e2e8f0;
+    border-radius: 8px;
+    font-size: 1rem;
+    outline: none;
+    transition: border-color 0.2s;
+    color: #2d3748;
+}
+
+.type-text-input:focus { border-color: #667eea; }
+
+.type-options {
+    display: flex;
+    gap: 20px;
+    flex-wrap: wrap;
+}
+
+.option-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 0.85rem;
+    color: #4a5568;
+}
+
+.option-row select {
+    padding: 6px 10px;
+    border: 1px solid #e2e8f0;
+    border-radius: 6px;
+    font-size: 0.85rem;
+    cursor: pointer;
+    outline: none;
+}
+
+#typeCanvas {
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+    width: 100%;
+    background: white;
+    display: block;
+}
+
+/* ── Upload Signature ── */
+.upload-sig-area {
+    border: 2px dashed #a0aec0;
+    border-radius: 10px;
+    padding: 36px 20px;
+    text-align: center;
+    cursor: pointer;
+    transition: all 0.2s;
+    margin-bottom: 12px;
+    color: #4a5568;
+    font-size: 0.9rem;
+}
+
+.upload-sig-area:hover {
+    border-color: #667eea;
+    background: #ebf4ff;
+}
+
+.upload-sig-hint {
+    font-size: 0.78rem;
+    color: #a0aec0;
+    margin-top: 6px;
+}
+
+.upload-preview-canvas {
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+    width: 100%;
+    background: white;
+    display: block;
+}
+
+/* ── PDF Preview ── */
+.hint-banner {
+    font-size: 0.82rem;
+    color: #744210;
+    background: #fefcbf;
+    border-left: 3px solid #f6c90e;
+    border-radius: 6px;
+    padding: 10px 14px;
+    margin-bottom: 14px;
+}
+
+.sig-controls {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-wrap: wrap;
+    font-size: 0.85rem;
+    color: #4a5568;
+    margin-bottom: 12px;
+}
+
+.preview-scroll-wrapper {
+    overflow: auto;
+    border: 2px solid #e2e8f0;
+    border-radius: 10px;
+    background: #edf2f7;
+    min-height: 120px;
+}
+
+.pdf-preview-container {
+    position: relative;
+    display: inline-block;
+    min-width: 100%;
+}
+
+#pdfPreviewCanvas {
+    display: block;
+    max-width: 100%;
+}
+
+/* ── Signature Overlay ── */
+.sig-overlay {
+    position: absolute;
+    cursor: move;
+    user-select: none;
+    border: 2px dashed #667eea;
+    border-radius: 4px;
+    box-sizing: border-box;
+}
+
+.sig-overlay img {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+    display: block;
+    pointer-events: none;
+}
+
+.resize-handle {
+    position: absolute;
+    bottom: -7px;
+    right: -7px;
+    width: 14px;
+    height: 14px;
+    background: #667eea;
+    border: 2px solid white;
+    border-radius: 50%;
+    cursor: se-resize;
+}
+
+/* ── Position Info Bar ── */
+.pos-info-bar {
+    display: flex;
+    gap: 20px;
+    padding: 8px 14px;
+    background: #f7fafc;
+    border-radius: 6px;
+    font-size: 0.82rem;
+    color: #718096;
+    margin-top: 10px;
+    flex-wrap: wrap;
+}
+
+/* ── Nav Button ── */
+.nav-btn-outline {
+    display: inline-block;
+    margin-top: 10px;
+    padding: 7px 16px;
+    border: 1.5px solid #667eea;
+    border-radius: 8px;
+    color: #667eea;
+    text-decoration: none;
+    font-size: 0.88rem;
+    font-weight: 600;
+    transition: all 0.2s;
+}
+
+.nav-btn-outline:hover {
+    background: #667eea;
+    color: white;
+}
+
+/* ── Output section (reuse from style.css but scoped) ── */
+.btn-large {
+    padding: 14px;
+    font-size: 1rem;
+}
+
+/* ── Misc ── */
+.btn-sm { padding: 5px 12px; font-size: 0.8rem; }
+
+@media (max-width: 520px) {
+    .tab-btn { font-size: 0.78rem; padding: 8px 4px; }
+    .canvas-controls, .sig-controls, .type-options { gap: 8px; }
+    .pos-info-bar { gap: 10px; }
+}

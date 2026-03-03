@@ -1,0 +1,182 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tanda Tangan PDF - PDF Tools</title>
+    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="signature.css">
+    <script src="https://unpkg.com/pdf-lib@1.17.1/dist/pdf-lib.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Dancing+Script:wght@700&family=Pacifico&family=Great+Vibes&family=Sacramento&display=swap" rel="stylesheet">
+</head>
+<body>
+    <div class="container sig-container">
+
+        <!-- Header -->
+        <div class="header">
+            <h1>✍️ Tanda Tangan PDF</h1>
+            <p>Tambahkan tanda tangan ke dokumen PDF — gratis, aman, langsung di browser.</p>
+            <a href="index.html" class="nav-btn nav-btn-outline">← Kembali ke PDF Merger</a>
+        </div>
+
+        <!-- STEP 1: Upload PDF -->
+        <div class="step-card" id="stepUpload">
+            <div class="step-header">
+                <span class="step-number">1</span>
+                <h2>Upload PDF</h2>
+            </div>
+            <div class="upload-area" id="dropZone">
+                <div class="upload-icon">📄</div>
+                <p class="upload-title">Drag & Drop PDF di sini</p>
+                <p class="upload-sub">atau</p>
+                <input type="file" id="pdfInput" accept=".pdf" hidden>
+                <button class="btn btn-primary" onclick="document.getElementById('pdfInput').click()">
+                    Pilih File PDF
+                </button>
+            </div>
+            <div id="uploadedFile" class="uploaded-file hidden">
+                <span id="uploadedFileName">📄</span>
+                <button class="btn btn-danger-outline btn-sm" onclick="clearPDF()">❌ Hapus</button>
+            </div>
+        </div>
+
+        <!-- STEP 2: Pilih Halaman -->
+        <div class="step-card step-disabled" id="stepPage">
+            <div class="step-header">
+                <span class="step-number">2</span>
+                <h2>Pilih Halaman yang Ditandatangani</h2>
+            </div>
+            <div id="pageSelector" class="page-selector">
+                <p class="placeholder-text">Upload PDF terlebih dahulu</p>
+            </div>
+        </div>
+
+        <!-- STEP 3: Buat Tanda Tangan -->
+        <div class="step-card step-disabled" id="stepSign">
+            <div class="step-header">
+                <span class="step-number">3</span>
+                <h2>Buat Tanda Tangan</h2>
+            </div>
+
+            <div class="tab-group">
+                <button class="tab-btn active" id="tabBtnDraw" onclick="switchTab('draw', this)">✏️ Gambar</button>
+                <button class="tab-btn" id="tabBtnType" onclick="switchTab('type', this)">⌨️ Ketik</button>
+                <button class="tab-btn" id="tabBtnUpload" onclick="switchTab('upload', this)">🖼️ Upload</button>
+            </div>
+
+            <!-- Tab: Gambar -->
+            <div class="tab-content active" id="tabDraw">
+                <div class="canvas-wrapper" id="canvasWrapper">
+                    <canvas id="signatureCanvas"></canvas>
+                    <p class="canvas-hint" id="canvasHint">Gambar tanda tangan Anda di sini</p>
+                </div>
+                <div class="canvas-controls">
+                    <label>Warna:</label>
+                    <input type="color" id="penColor" value="#000000">
+                    <label>Ukuran:</label>
+                    <input type="range" id="penSize" min="1" max="10" value="3">
+                    <span id="penSizeLabel">3px</span>
+                    <button class="btn btn-secondary btn-sm" onclick="clearCanvas()">🗑️ Hapus</button>
+                </div>
+            </div>
+
+            <!-- Tab: Ketik -->
+            <div class="tab-content" id="tabType">
+                <div class="type-wrapper">
+                    <input type="text" id="typeInput" class="type-text-input"
+                        placeholder="Ketik nama Anda..." oninput="updateTypeSignature()">
+                    <div class="type-options">
+                        <div class="option-row">
+                            <label>Font:</label>
+                            <select id="fontSelect" onchange="updateTypeSignature()">
+                                <option value="Dancing Script">Dancing Script</option>
+                                <option value="Pacifico">Pacifico</option>
+                                <option value="Great Vibes">Great Vibes</option>
+                                <option value="Sacramento">Sacramento</option>
+                            </select>
+                        </div>
+                        <div class="option-row">
+                            <label>Warna:</label>
+                            <input type="color" id="typeColor" value="#000000" oninput="updateTypeSignature()">
+                        </div>
+                    </div>
+                    <canvas id="typeCanvas"></canvas>
+                </div>
+            </div>
+
+            <!-- Tab: Upload -->
+            <div class="tab-content" id="tabUpload">
+                <div class="upload-sig-area" id="uploadSigArea"
+                    onclick="document.getElementById('sigImageInput').click()">
+                    <p>📁 Klik untuk upload gambar tanda tangan</p>
+                    <p class="upload-sig-hint">Format: PNG (transparan), JPG, GIF</p>
+                    <input type="file" id="sigImageInput" accept="image/*" hidden>
+                </div>
+                <canvas id="uploadCanvas" class="upload-preview-canvas hidden"></canvas>
+            </div>
+
+            <button class="btn btn-primary btn-full" id="useSignatureBtn"
+                onclick="useSignature()" disabled>
+                ✅ Gunakan Tanda Tangan Ini
+            </button>
+        </div>
+
+        <!-- STEP 4: Atur Posisi -->
+        <div class="step-card step-disabled" id="stepPosition">
+            <div class="step-header">
+                <span class="step-number">4</span>
+                <h2>Atur Posisi Tanda Tangan</h2>
+            </div>
+            <p class="hint-banner">💡 Klik & drag tanda tangan ke posisi yang diinginkan. Drag sudut kanan bawah untuk resize.</p>
+
+            <div class="sig-controls">
+                <label>Ukuran:</label>
+                <input type="range" id="sigSize" min="40" max="500" value="150"
+                    oninput="updateSigSize(this.value)">
+                <span id="sigSizeLabel">150px</span>
+                <button class="btn btn-secondary btn-sm" onclick="resetPosition()">↺ Reset</button>
+            </div>
+
+            <div class="preview-scroll-wrapper">
+                <div id="pdfPreviewContainer" class="pdf-preview-container">
+                    <canvas id="pdfPreviewCanvas"></canvas>
+                    <div id="signatureOverlay" class="sig-overlay hidden">
+                        <img id="signaturePreview" src="" alt="Tanda Tangan" draggable="false">
+                        <div class="resize-handle" id="resizeHandle"></div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="pos-info-bar">
+                <span>X: <strong id="posX">50</strong>px</span>
+                <span>Y: <strong id="posY">50</strong>px</span>
+                <span>Lebar: <strong id="posW">150</strong>px</span>
+                <span>Halaman: <strong id="currentPageInfo">-</strong></span>
+            </div>
+        </div>
+
+        <!-- STEP 5: Download -->
+        <div class="step-card step-disabled" id="stepDownload">
+            <div class="step-header">
+                <span class="step-number">5</span>
+                <h2>Simpan PDF</h2>
+            </div>
+            <div class="output-section">
+                <label for="outputName">💾 Nama file output:</label>
+                <div class="output-input-row">
+                    <input type="text" id="outputName" class="output-input"
+                        value="signed_document" placeholder="nama_file">
+                    <span class="output-ext">.pdf</span>
+                </div>
+            </div>
+            <button class="btn btn-success btn-full btn-large" onclick="applySignatureAndDownload()">
+                💾 Simpan & Download PDF
+            </button>
+            <div id="downloadStatus" class="status-box hidden"></div>
+        </div>
+
+    </div>
+    <script src="signature.js"></script>
+</body>
+</html>

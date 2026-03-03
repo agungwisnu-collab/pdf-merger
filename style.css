@@ -272,6 +272,21 @@ body {
     border: 1px solid #feb2b2;
 }
 
+/* ==================== NAV BUTTON ==================== */
+.nav-btn {
+    display: inline-block;
+    margin-top: 12px;
+    padding: 8px 18px;
+    background: #667eea;
+    color: white;
+    border-radius: 8px;
+    text-decoration: none;
+    font-size: 0.88rem;
+    font-weight: 600;
+    transition: background 0.2s;
+}
+.nav-btn:hover { background: #5a6fd6; }
+
 /* ==================== FOOTER ==================== */
 .footer {
     text-align: center;
