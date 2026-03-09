@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gambar ke PDF - PDF Tools</title>
+    <link rel="stylesheet" href="style.css">
+    <script src="https://unpkg.com/pdf-lib@1.17.1/dist/pdf-lib.min.js"></script>
+</head>
+<body>
+    <div class="container">
+
+        <!-- Header -->
+        <div class="header">
+            <h1>🖼️ Gambar ke PDF</h1>
+            <p>Ubah gambar menjadi dokumen PDF — gratis, cepat, dan aman.<br>File <strong>tidak dikirim ke server</strong>, semua proses di browser kamu.</p>
+            <a href="index.html" class="nav-btn nav-btn-outline">← Kembali ke PDF Merger</a>
+        </div>
+
+        <!-- Upload Area -->
+        <div class="upload-area" id="dropZone">
+            <div class="upload-icon">🖼️</div>
+            <p class="upload-title">Drag & Drop gambar di sini</p>
+            <p class="upload-sub">atau</p>
+            <input type="file" id="fileInput" multiple accept="image/*" hidden>
+            <button class="btn btn-primary" onclick="document.getElementById('fileInput').click()">
+                Pilih Gambar
+            </button>
+            <p class="upload-formats">JPG · PNG · WebP · GIF · BMP</p>
+        </div>
+
+        <!-- File List -->
+        <div id="fileSection" class="file-section hidden">
+            <div class="file-section-header">
+                <h3>🖼️ Gambar yang Dipilih (<span id="fileCount">0</span>)</h3>
+                <button class="btn btn-danger-outline" onclick="clearAll()">🗑️ Hapus Semua</button>
+            </div>
+            <p class="drag-hint">💡 Drag gambar untuk mengubah urutan halaman</p>
+            <ul id="fileList"></ul>
+        </div>
+
+        <!-- Settings -->
+        <div id="settingsSection" class="output-section hidden">
+            <div class="settings-grid">
+                <div class="setting-group">
+                    <label for="pageSize">📐 Ukuran Halaman:</label>
+                    <select id="pageSize" class="setting-select">
+                        <option value="fit">Sesuai Gambar</option>
+                        <option value="a4-portrait" selected>A4 Portrait</option>
+                        <option value="a4-landscape">A4 Landscape</option>
+                        <option value="letter-portrait">Letter Portrait</option>
+                        <option value="letter-landscape">Letter Landscape</option>
+                    </select>
+                </div>
+                <div class="setting-group">
+                    <label for="fitMode">🔲 Tampilan Gambar:</label>
+                    <select id="fitMode" class="setting-select">
+                        <option value="contain">Fit (Proporsional)</option>
+                        <option value="fill">Fill (Penuh)</option>
+                    </select>
+                </div>
+            </div>
+            <label for="outputName" class="output-name-label">💾 Nama file output:</label>
+            <div class="output-input-row">
+                <input type="text" id="outputName" class="output-input" value="images_to_pdf" placeholder="nama_file" />
+                <span class="output-ext">.pdf</span>
+            </div>
+        </div>
+
+        <!-- Action Buttons -->
+        <div class="action-row">
+            <button class="btn btn-secondary" onclick="document.getElementById('fileInput').click()">
+                ➕ Tambah Gambar
+            </button>
+            <button class="btn btn-success" id="convertBtn" onclick="convertToPDF()" disabled>
+                📄 Buat PDF
+            </button>
+        </div>
+
+        <!-- Progress -->
+        <div id="progressSection" class="hidden">
+            <div class="progress-bar-track">
+                <div class="progress-bar-fill" id="progressBar" style="width: 0%"></div>
+            </div>
+            <p id="progressText" class="progress-text">Memproses...</p>
+        </div>
+
+        <!-- Status -->
+        <div id="statusBox" class="status-box hidden"></div>
+
+        <!-- Footer -->
+        <div class="footer">
+            <p>🔒 100% Aman · 🆓 Gratis · ⚡ Cepat · Tidak perlu login</p>
+        </div>
+    </div>
+
+    <script src="image-to-pdf.js"></script>
+</body>
+</html>

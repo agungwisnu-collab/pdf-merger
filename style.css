@@ -298,6 +298,69 @@ body {
     font-size: 0.82rem;
 }
 
+/* ==================== NAV BUTTON OUTLINE ==================== */
+.nav-btn-outline {
+    background: transparent;
+    color: #667eea;
+    border: 1.5px solid #667eea;
+}
+.nav-btn-outline:hover {
+    background: #ebf4ff;
+}
+
+/* ==================== IMAGE TO PDF — SETTINGS ==================== */
+.settings-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+    margin-bottom: 14px;
+}
+
+@media (max-width: 480px) {
+    .settings-grid { grid-template-columns: 1fr; }
+}
+
+.setting-group {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.setting-group label {
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: #4a5568;
+}
+
+.setting-select {
+    padding: 8px 10px;
+    border: 1.5px solid #e2e8f0;
+    border-radius: 8px;
+    font-size: 0.9rem;
+    color: #2d3748;
+    background: white;
+    outline: none;
+    cursor: pointer;
+    transition: border-color 0.2s;
+}
+
+.setting-select:focus { border-color: #667eea; }
+
+.output-name-label {
+    display: block;
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: #4a5568;
+    margin-bottom: 8px;
+}
+
+.upload-formats {
+    margin-top: 10px;
+    font-size: 0.78rem;
+    color: #a0aec0;
+    letter-spacing: 0.03em;
+}
+
 /* ==================== UTILITY ==================== */
 .hidden { display: none !important; }
 
