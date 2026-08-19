@@ -8,14 +8,14 @@
 const GDRIVE_DEFAULT_CONFIG = {
     // Masukkan Client ID dari Google Cloud Console (OAuth 2.0 Client ID)
     // Contoh: "1234567890-abcdefg.apps.googleusercontent.com"
-    CLIENT_ID: '',
+    CLIENT_ID: '80487558987-robs4ardmvbb1stb3aathj9t2qm1refr.apps.googleusercontent.com',
 
     // Masukkan API Key dari Google Cloud Console
     // Contoh: "AIzaSyD-xxxxxxxxxxxxxxxxxxxxxxxxx"
-    API_KEY: '',
+    API_KEY: 'AIzaSyAt_tK4VHESkzwhIQxVt-Bu8p5KtN3PNyk',
 
     // Project Number (Opsional / App ID)
-    APP_ID: '',
+    APP_ID: 'pdf-merger-506023',
 
     // Scope untuk membaca file dari Google Drive
     SCOPES: 'https://www.googleapis.com/auth/drive.readonly',
@@ -24,14 +24,14 @@ const GDRIVE_DEFAULT_CONFIG = {
 // Mengambil konfigurasi aktif (prioritas dari localStorage jika pernah diinput lewat UI)
 function getGDriveConfig() {
     const savedClientId = localStorage.getItem('gdrive_client_id');
-    const savedApiKey   = localStorage.getItem('gdrive_api_key');
-    const savedAppId    = localStorage.getItem('gdrive_app_id');
+    const savedApiKey = localStorage.getItem('gdrive_api_key');
+    const savedAppId = localStorage.getItem('gdrive_app_id');
 
     return {
         CLIENT_ID: savedClientId || GDRIVE_DEFAULT_CONFIG.CLIENT_ID,
-        API_KEY:   savedApiKey   || GDRIVE_DEFAULT_CONFIG.API_KEY,
-        APP_ID:    savedAppId    || GDRIVE_DEFAULT_CONFIG.APP_ID,
-        SCOPES:    GDRIVE_DEFAULT_CONFIG.SCOPES,
+        API_KEY: savedApiKey || GDRIVE_DEFAULT_CONFIG.API_KEY,
+        APP_ID: savedAppId || GDRIVE_DEFAULT_CONFIG.APP_ID,
+        SCOPES: GDRIVE_DEFAULT_CONFIG.SCOPES,
     };
 }
 
