@@ -54,6 +54,17 @@ function handleFiles(files) {
     pdfOnly.forEach(file => loadPdfItem(file));
 }
 
+// ─── Google Drive Picker ───────────────────────────────────────
+function pickFromGDrive() {
+    openGDrivePicker({
+        mimeTypes: ['application/pdf'],
+        multiSelect: true,
+        onFilesSelected: (files) => {
+            handleFiles(files);
+        },
+    });
+}
+
 // ─── Load PDF Item (async: thumbnail + page count) ─────────────
 async function loadPdfItem(file) {
     const item = {

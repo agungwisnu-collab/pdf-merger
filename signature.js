@@ -41,6 +41,19 @@ dropZone.addEventListener('drop', async (e) => {
     if (file?.type === 'application/pdf') await loadPDF(file);
 });
 
+// ─── Google Drive Picker ───────────────────────────────────────
+function pickPDFFromGDrive() {
+    openGDrivePicker({
+        mimeTypes: ['application/pdf'],
+        multiSelect: false,
+        onFilesSelected: async (files) => {
+            if (files.length > 0) {
+                await loadPDF(files[0]);
+            }
+        },
+    });
+}
+
 async function loadPDF(file) {
     try {
         state.pdfFile = file;

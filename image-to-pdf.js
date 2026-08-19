@@ -62,6 +62,17 @@ function handleFiles(files) {
     imgOnly.forEach(file => loadImageItem(file));
 }
 
+// ─── Google Drive Picker ───────────────────────────────────────
+function pickFromGDrive() {
+    openGDrivePicker({
+        mimeTypes: ['image/*'],
+        multiSelect: true,
+        onFilesSelected: (files) => {
+            handleFiles(files);
+        },
+    });
+}
+
 // ─── Load Image Item ───────────────────────────────────────────
 async function loadImageItem(file) {
     const item = { file, thumbnail: null, width: 0, height: 0 };
