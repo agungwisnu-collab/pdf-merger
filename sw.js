@@ -2,7 +2,7 @@
  *  sw.js — Service Worker for Offline PWA Support
  * ============================================================ */
 
-const CACHE_NAME = 'pdf-flow-v3';
+const CACHE_NAME = 'pdf-flow-v4';
 const ASSETS_TO_CACHE = [
     './',
     './index.html',
@@ -16,6 +16,12 @@ const ASSETS_TO_CACHE = [
     './protect-pdf.html',
     './compress-pdf.html',
     './ocr-pdf.html',
+    './rotate-pdf.html',
+    './unlock-pdf.html',
+    './crop-pdf.html',
+    './word-to-pdf.html',
+    './excel-to-pdf.html',
+    './edit-pdf.html',
     './style.css',
     './signature.css',
     './theme.js',
@@ -30,6 +36,12 @@ const ASSETS_TO_CACHE = [
     './protect-pdf.js',
     './compress-pdf.js',
     './ocr-pdf.js',
+    './rotate-pdf.js',
+    './unlock-pdf.js',
+    './crop-pdf.js',
+    './word-to-pdf.js',
+    './excel-to-pdf.js',
+    './edit-pdf.js',
     './gdrive-config.js',
     './gdrive-picker.js',
     './manifest.json',

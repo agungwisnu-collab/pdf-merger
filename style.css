@@ -1557,6 +1557,252 @@ body {
 .doc-mini-btn:hover { color: var(--primary); background: var(--border-subtle); }
 .doc-mini-btn.del-btn:hover { color: var(--danger); background: var(--danger-light); }
 
+/* ==================== TOOLS HUB DASHBOARD ==================== */
+.tools-hub-hero {
+    text-align: center;
+    margin-bottom: 28px;
+}
+
+.tools-hub-title {
+    font-size: 2.1rem;
+    font-weight: 800;
+    color: var(--text-main);
+    letter-spacing: -0.03em;
+    margin-bottom: 10px;
+}
+
+.tools-hub-title .gradient-text {
+    background: linear-gradient(135deg, var(--primary) 0%, #a855f7 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+}
+
+.tools-hub-desc {
+    color: var(--text-subtle);
+    font-size: 1rem;
+    max-width: 620px;
+    margin: 0 auto 24px auto;
+    line-height: 1.6;
+}
+
+/* Search Bar */
+.search-bar-wrap {
+    position: relative;
+    max-width: 580px;
+    margin: 0 auto 24px auto;
+}
+
+.search-input-field {
+    width: 100%;
+    padding: 14px 46px 14px 44px;
+    border-radius: 16px;
+    border: 1.5px solid var(--border-subtle);
+    background: var(--bg-card);
+    color: var(--text-main);
+    font-size: 0.96rem;
+    font-family: inherit;
+    box-shadow: var(--shadow-sm);
+    outline: none;
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.search-input-field:focus {
+    border-color: var(--primary);
+    box-shadow: 0 0 0 4px var(--primary-glow), var(--shadow-md);
+    background: var(--bg-card);
+}
+
+.search-icon-left {
+    position: absolute;
+    left: 16px;
+    top: 50%;
+    transform: translateY(-50%);
+    font-size: 1.1rem;
+    color: var(--text-muted);
+    pointer-events: none;
+}
+
+.search-key-badge {
+    position: absolute;
+    right: 14px;
+    top: 50%;
+    transform: translateY(-50%);
+    background: var(--bg-subtle);
+    border: 1px solid var(--border-subtle);
+    border-radius: 6px;
+    padding: 2px 7px;
+    font-size: 0.75rem;
+    font-weight: 700;
+    color: var(--text-muted);
+    font-family: monospace;
+    pointer-events: none;
+}
+
+/* Category Filter Pills */
+.category-filter-nav {
+    display: flex;
+    justify-content: center;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-bottom: 28px;
+}
+
+.category-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 8px 16px;
+    border-radius: 20px;
+    background: var(--bg-card);
+    border: 1.5px solid var(--border-subtle);
+    color: var(--text-subtle);
+    font-size: 0.85rem;
+    font-weight: 600;
+    font-family: inherit;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    user-select: none;
+}
+
+.category-pill:hover {
+    border-color: var(--primary);
+    color: var(--text-main);
+    transform: translateY(-1px);
+}
+
+.category-pill.active {
+    background: var(--primary);
+    border-color: var(--primary);
+    color: #ffffff;
+    box-shadow: 0 4px 14px var(--primary-glow);
+}
+
+/* Tools Cards Grid */
+.tools-hub-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+    gap: 16px;
+    margin-bottom: 36px;
+}
+
+.hub-tool-card {
+    display: flex;
+    flex-direction: column;
+    padding: 20px;
+    background: var(--bg-card);
+    border: 1.5px solid var(--border-card);
+    border-radius: 18px;
+    text-decoration: none;
+    color: inherit;
+    position: relative;
+    overflow: hidden;
+    transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+    box-shadow: var(--shadow-sm);
+}
+
+.hub-tool-card:hover {
+    border-color: var(--primary);
+    transform: translateY(-4px);
+    box-shadow: 0 12px 28px rgba(0, 0, 0, 0.08), 0 0 20px var(--primary-glow);
+}
+
+.hub-card-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 12px;
+}
+
+.hub-card-icon {
+    width: 44px;
+    height: 44px;
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.5rem;
+    background: var(--primary-light);
+    border: 1px solid rgba(99, 102, 241, 0.15);
+    transition: transform 0.2s ease;
+}
+
+.hub-tool-card:hover .hub-card-icon {
+    transform: scale(1.1) rotate(4deg);
+}
+
+.hub-card-badge {
+    font-size: 0.68rem;
+    font-weight: 800;
+    padding: 3px 8px;
+    border-radius: 6px;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+}
+
+.badge-new { background: rgba(16, 185, 129, 0.15); color: #10b981; border: 1px solid rgba(16, 185, 129, 0.3); }
+.badge-pro { background: rgba(99, 102, 241, 0.15); color: var(--primary); border: 1px solid rgba(99, 102, 241, 0.3); }
+.badge-ai  { background: linear-gradient(135deg, rgba(236, 72, 153, 0.2), rgba(168, 85, 247, 0.2)); color: #d946ef; border: 1px solid rgba(236, 72, 153, 0.3); }
+
+.hub-card-title {
+    font-size: 1.05rem;
+    font-weight: 700;
+    color: var(--text-main);
+    margin-bottom: 6px;
+}
+
+.hub-card-desc {
+    font-size: 0.83rem;
+    color: var(--text-muted);
+    line-height: 1.5;
+    margin-bottom: 12px;
+    flex-grow: 1;
+}
+
+.hub-card-footer {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 0.8rem;
+    font-weight: 700;
+    color: var(--primary);
+    margin-top: auto;
+}
+
+.hub-card-footer span {
+    transition: transform 0.2s;
+}
+
+.hub-tool-card:hover .hub-card-footer span {
+    transform: translateX(4px);
+}
+
+.tools-empty-state {
+    grid-column: 1 / -1;
+    text-align: center;
+    padding: 48px 20px;
+    color: var(--text-muted);
+}
+
+/* Section Divider */
+.hub-divider {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    margin: 40px 0 28px 0;
+    color: var(--text-muted);
+    font-size: 0.88rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+}
+
+.hub-divider::before, .hub-divider::after {
+    content: '';
+    flex: 1;
+    height: 1px;
+    background: var(--border-subtle);
+}
+
 /* ==================== RESPONSIVE ==================== */
 @media (max-width: 768px) {
     .nav-container {
@@ -1600,4 +1846,13 @@ body {
     .settings-grid {
         grid-template-columns: 1fr;
     }
+
+    .tools-hub-title {
+        font-size: 1.6rem;
+    }
+
+    .tools-hub-grid {
+        grid-template-columns: 1fr;
+    }
 }
+
