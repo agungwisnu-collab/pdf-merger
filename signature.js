@@ -528,6 +528,83 @@ async function applySignatureAndDownload() {
     }
 }
 
+// ─── Apply Signature & Save Directly to Google Drive ───────────
+async function applySignatureAndSaveToGDrive() {
+    if (!state.pdfFile) {
+        alert('Harap unggah dokumen PDF terlebih dahulu.');
+        return;
+    }
+    if (!state.signatureDataUrl) {
+        alert('Harap buat dan pasang tanda tangan terlebih dahulu.');
+        return;
+    }
+
+    const statusBox = document.getElementById('downloadStatus');
+    statusBox.className = 'status-box';
+    statusBox.textContent = '⏳ Memproses tanda tangan ke dokumen...';
+    statusBox.classList.remove('hidden');
+
+    try {
+        const arrayBuffer = await state.pdfFile.arrayBuffer();
+        const pdfDoc = await PDFLib.PDFDocument.load(arrayBuffer);
+
+        const base64 = state.signatureDataUrl.split(',')[1];
+        const binary = atob(base64);
+        const bytes  = new Uint8Array(binary.length);
+        for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
+
+        const sigImage = await pdfDoc.embedPng(bytes);
+
+        const pdfPage = pdfDoc.getPage(state.selectedPage - 1);
+        const { width: pageW, height: pageH } = pdfPage.getSize();
+
+        const previewCanvas = document.getElementById('pdfPreviewCanvas');
+        const scaleX = pageW / previewCanvas.width;
+        const scaleY = pageH / previewCanvas.height;
+
+        const overlay     = document.getElementById('signatureOverlay');
+        const overlayLeft = overlay.offsetLeft;
+        const overlayTop  = overlay.offsetTop;
+        const overlayW    = overlay.offsetWidth;
+        const overlayH    = overlay.offsetHeight;
+
+        const pdfX = overlayLeft * scaleX;
+        const pdfW = overlayW   * scaleX;
+        const pdfH = overlayH   * scaleY;
+        const pdfY = pageH - (overlayTop * scaleY) - pdfH;
+
+        pdfPage.drawImage(sigImage, { x: pdfX, y: pdfY, width: pdfW, height: pdfH });
+
+        const pdfBytes = await pdfDoc.save();
+        const blob     = new Blob([pdfBytes], { type: 'application/pdf' });
+
+        let name = document.getElementById('outputName').value.trim() || 'signed_document';
+        if (!name.toLowerCase().endsWith('.pdf')) name += '.pdf';
+
+        uploadBlobToGDrive({
+            blob,
+            filename: name,
+            mimeType: 'application/pdf',
+            onProgress: (p, text) => {
+                statusBox.textContent = `⏳ ${text} (${p}%)`;
+            },
+            onSuccess: (res) => {
+                statusBox.className = 'status-box success';
+                statusBox.innerHTML = `✅ Dokumen <strong>"${res.name}"</strong> berhasil ditandatangani dan disimpan di Google Drive! <a href="${res.webViewLink}" target="_blank" rel="noopener" style="color: var(--primary); text-decoration: underline; margin-left: 8px; font-weight: 700;">🔗 Buka File di Google Drive</a>`;
+            },
+            onError: (err) => {
+                statusBox.className = 'status-box error';
+                statusBox.textContent = '❌ Gagal menyimpan ke Google Drive: ' + err.message;
+            },
+        });
+
+    } catch (err) {
+        statusBox.className = 'status-box error';
+        statusBox.textContent = '❌ Error: ' + err.message;
+        console.error(err);
+    }
+}
+
 // ─── Helpers ────────────────────────────────────────────────────
 function formatSize(bytes) {
     if (bytes < 1024)        return bytes + ' B';

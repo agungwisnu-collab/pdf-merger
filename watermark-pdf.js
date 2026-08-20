@@ -253,6 +253,115 @@ async function applyWatermarkAndDownload() {
     }
 }
 
+// ─── Apply Watermark & Save Directly to Google Drive ───────────
+async function applyWatermarkAndSaveToGDrive() {
+    if (!pdfFile) return;
+
+    if (wmType === 'image' && !wmImageFile) {
+        alert('Harap unggah gambar logo terlebih dahulu.');
+        return;
+    }
+
+    const rawName = document.getElementById('outputName').value.trim() || 'watermarked_document';
+    const outputName = (rawName.endsWith('.pdf') ? rawName : rawName + '.pdf');
+    const btn = document.getElementById('applyWmBtn');
+    const gdriveBtn = document.getElementById('applyWmGDriveBtn');
+    btn.disabled = true;
+    if (gdriveBtn) gdriveBtn.disabled = true;
+
+    showProgress(10, 'Menerapkan cap air ke dokumen...');
+
+    try {
+        const { PDFDocument, rgb, degrees, StandardFonts } = PDFLib;
+        const arrayBuf = await pdfFile.arrayBuffer();
+        const pdfDoc = await PDFDocument.load(arrayBuf);
+        const pages = pdfDoc.getPages();
+
+        const opacity = parseInt(document.getElementById('wmOpacity').value) / 100;
+        const angle = parseInt(document.getElementById('wmRotation').value);
+
+        let embeddedImg = null;
+        if (wmType === 'image' && wmImageFile) {
+            const imgBytes = new Uint8Array(await wmImageFile.arrayBuffer());
+            if (wmImageFile.type === 'image/png') {
+                embeddedImg = await pdfDoc.embedPng(imgBytes);
+            } else {
+                embeddedImg = await pdfDoc.embedJpg(imgBytes);
+            }
+        }
+
+        const font = await pdfDoc.embedFont(StandardFonts.HelveticaBold);
+        const text = document.getElementById('wmText').value || 'CONFIDENTIAL';
+        const hexColor = document.getElementById('wmColor').value;
+        const r = parseInt(hexColor.slice(1, 3), 16) / 255;
+        const g = parseInt(hexColor.slice(3, 5), 16) / 255;
+        const b = parseInt(hexColor.slice(5, 7), 16) / 255;
+        const fontSize = parseInt(document.getElementById('wmFontSize').value);
+
+        for (let i = 0; i < pages.length; i++) {
+            const page = pages[i];
+            const { width, height } = page.getSize();
+            const pct = Math.round(10 + (i / pages.length) * 70);
+            showProgress(pct, `Memberi cap halaman ${i + 1} dari ${pages.length}...`);
+
+            if (wmType === 'text') {
+                const textW = font.widthOfTextAtSize(text, fontSize);
+                const textH = font.heightAtSize(fontSize);
+                page.drawText(text, {
+                    x: width / 2 - (textW / 2) * Math.cos((angle * Math.PI) / 180),
+                    y: height / 2 - (textH / 2) * Math.sin((angle * Math.PI) / 180),
+                    size: fontSize,
+                    font,
+                    color: rgb(r, g, b),
+                    opacity,
+                    rotate: degrees(angle),
+                });
+            } else if (embeddedImg) {
+                const maxW = width * 0.45;
+                const scale = maxW / embeddedImg.width;
+                const w = embeddedImg.width * scale;
+                const h = embeddedImg.height * scale;
+
+                page.drawImage(embeddedImg, {
+                    x: (width - w) / 2,
+                    y: (height - h) / 2,
+                    width: w,
+                    height: h,
+                    opacity,
+                    rotate: degrees(angle),
+                });
+            }
+        }
+
+        showProgress(80, 'Menyimpan dokumen PDF...');
+        const pdfBytes = await pdfDoc.save();
+        const blob = new Blob([pdfBytes], { type: 'application/pdf' });
+
+        uploadBlobToGDrive({
+            blob,
+            filename: outputName,
+            mimeType: 'application/pdf',
+            onProgress: showProgress,
+            onSuccess: (res) => {
+                showProgress(100, 'Selesai!');
+                showStatus(
+                    `✅ Dokumen <strong>"${res.name}"</strong> berhasil disimpan di Google Drive! <a href="${res.webViewLink}" target="_blank" rel="noopener" style="color: var(--primary); text-decoration: underline; margin-left: 8px; font-weight: 700;">🔗 Buka di Google Drive</a>`,
+                    'success'
+                );
+            },
+            onError: (err) => {
+                showStatus('❌ Gagal mengunggah ke Google Drive: ' + err.message, 'error');
+            },
+        });
+    } catch (err) {
+        hideProgress();
+        showStatus('❌ Error: ' + err.message, 'error');
+    } finally {
+        btn.disabled = false;
+        if (gdriveBtn) gdriveBtn.disabled = false;
+    }
+}
+
 function showProgress(percent, text) {
     document.getElementById('progressSection').classList.remove('hidden');
     document.getElementById('progressBar').style.width = percent + '%';

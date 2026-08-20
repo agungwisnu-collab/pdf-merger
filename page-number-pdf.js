@@ -161,6 +161,95 @@ async function applyPageNumbers() {
     }
 }
 
+// ─── Apply Page Numbers & Save to Google Drive ─────────────────
+async function applyPageNumbersAndSaveToGDrive() {
+    if (!pdfFile) return;
+
+    const rawName = document.getElementById('outputName').value.trim() || 'numbered_document';
+    const outputName = (rawName.endsWith('.pdf') ? rawName : rawName + '.pdf');
+    const formatType = document.getElementById('numFormat').value;
+    const startFromSheet = Math.max(1, parseInt(document.getElementById('startPage').value) || 1);
+
+    const btn = document.getElementById('applyNumBtn');
+    const gdriveBtn = document.getElementById('applyNumGDriveBtn');
+    btn.disabled = true;
+    if (gdriveBtn) gdriveBtn.disabled = true;
+
+    showProgress(10, 'Menambahkan nomor halaman ke dokumen...');
+
+    try {
+        const { PDFDocument, rgb, StandardFonts } = PDFLib;
+        const arrayBuf = await pdfFile.arrayBuffer();
+        const pdfDoc = await PDFDocument.load(arrayBuf);
+        const font = await pdfDoc.embedFont(StandardFonts.Helvetica);
+        const pages = pdfDoc.getPages();
+        const fontSize = 10;
+        const margin = 28;
+
+        for (let i = 0; i < pages.length; i++) {
+            const pageIndex = i + 1;
+            if (pageIndex < startFromSheet) continue;
+
+            const page = pages[i];
+            const { width, height } = page.getSize();
+            const currentNum = pageIndex - startFromSheet + 1;
+            const totalCount = pages.length - startFromSheet + 1;
+
+            let text = '';
+            if (formatType === 'num-only') text = `${currentNum}`;
+            else if (formatType === 'hal-x-dari-y') text = `Halaman ${currentNum} dari ${totalCount}`;
+            else if (formatType === 'page-x-of-y') text = `Page ${currentNum} of ${totalCount}`;
+            else if (formatType === 'dash') text = `- ${currentNum} -`;
+
+            const textW = font.widthOfTextAtSize(text, fontSize);
+            let x = 0;
+            let y = 0;
+
+            if (position.includes('left')) x = margin;
+            else if (position.includes('center')) x = (width - textW) / 2;
+            else if (position.includes('right')) x = width - margin - textW;
+
+            if (position.includes('top')) y = height - margin;
+            else if (position.includes('bottom')) y = margin;
+
+            page.drawText(text, {
+                x,
+                y,
+                size: fontSize,
+                font,
+                color: rgb(0.3, 0.35, 0.4),
+            });
+        }
+
+        showProgress(80, 'Menyimpan dokumen PDF...');
+        const pdfBytes = await pdfDoc.save();
+        const blob = new Blob([pdfBytes], { type: 'application/pdf' });
+
+        uploadBlobToGDrive({
+            blob,
+            filename: outputName,
+            mimeType: 'application/pdf',
+            onProgress: showProgress,
+            onSuccess: (res) => {
+                showProgress(100, 'Selesai!');
+                showStatus(
+                    `✅ Dokumen <strong>"${res.name}"</strong> berhasil disimpan di Google Drive! <a href="${res.webViewLink}" target="_blank" rel="noopener" style="color: var(--primary); text-decoration: underline; margin-left: 8px; font-weight: 700;">🔗 Buka di Google Drive</a>`,
+                    'success'
+                );
+            },
+            onError: (err) => {
+                showStatus('❌ Gagal mengunggah ke Google Drive: ' + err.message, 'error');
+            },
+        });
+    } catch (err) {
+        hideProgress();
+        showStatus('❌ Error: ' + err.message, 'error');
+    } finally {
+        btn.disabled = false;
+        if (gdriveBtn) gdriveBtn.disabled = false;
+    }
+}
+
 function showProgress(percent, text) {
     document.getElementById('progressSection').classList.remove('hidden');
     document.getElementById('progressBar').style.width = percent + '%';

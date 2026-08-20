@@ -253,6 +253,67 @@ async function saveOrganizedPDF() {
     }
 }
 
+// ─── Save Organized PDF to Google Drive ────────────────────────
+async function saveOrganizedToGDrive() {
+    if (!pdfFile || pages.length === 0) return;
+
+    const rawName = document.getElementById('outputName').value.trim() || 'organized_document';
+    const outputName = (rawName.endsWith('.pdf') ? rawName : rawName + '.pdf');
+    const saveBtn = document.getElementById('savePdfBtn');
+    const gdriveBtn = document.getElementById('saveGDriveBtn');
+    saveBtn.disabled = true;
+    if (gdriveBtn) gdriveBtn.disabled = true;
+
+    showProgress(10, 'Menyusun dokumen PDF baru...');
+
+    try {
+        const { PDFDocument, degrees } = PDFLib;
+        const arrayBuf = await pdfFile.arrayBuffer();
+        const srcDoc = await PDFDocument.load(arrayBuf);
+        const newDoc = await PDFDocument.create();
+
+        for (let i = 0; i < pages.length; i++) {
+            const item = pages[i];
+            const pct = Math.round(10 + (i / pages.length) * 70);
+            showProgress(pct, `Menyalin lembar #${i + 1}...`);
+
+            const [copiedPage] = await newDoc.copyPages(srcDoc, [item.origIndex]);
+            if (item.rotation !== 0) {
+                const currentRot = copiedPage.getRotation().angle;
+                copiedPage.setRotation(degrees((currentRot + item.rotation) % 360));
+            }
+            newDoc.addPage(copiedPage);
+        }
+
+        showProgress(80, 'Menyimpan dokumen PDF...');
+        const pdfBytes = await newDoc.save();
+        const blob = new Blob([pdfBytes], { type: 'application/pdf' });
+
+        uploadBlobToGDrive({
+            blob,
+            filename: outputName,
+            mimeType: 'application/pdf',
+            onProgress: showProgress,
+            onSuccess: (res) => {
+                showProgress(100, 'Selesai!');
+                showStatus(
+                    `✅ Dokumen <strong>"${res.name}"</strong> berhasil disimpan di Google Drive! <a href="${res.webViewLink}" target="_blank" rel="noopener" style="color: var(--primary); text-decoration: underline; margin-left: 8px; font-weight: 700;">🔗 Buka di Google Drive</a>`,
+                    'success'
+                );
+            },
+            onError: (err) => {
+                showStatus('❌ Gagal mengunggah ke Google Drive: ' + err.message, 'error');
+            },
+        });
+    } catch (err) {
+        hideProgress();
+        showStatus('❌ Error: ' + err.message, 'error');
+    } finally {
+        saveBtn.disabled = false;
+        if (gdriveBtn) gdriveBtn.disabled = false;
+    }
+}
+
 function showProgress(percent, text) {
     document.getElementById('progressSection').classList.remove('hidden');
     document.getElementById('progressBar').style.width = percent + '%';

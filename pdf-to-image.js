@@ -221,6 +221,76 @@ async function convertAndDownloadAll() {
     }
 }
 
+// ─── Convert & Save All to Google Drive as ZIP ─────────────────
+async function convertAndSaveAllToGDrive() {
+    if (!pdfDocJs) return;
+
+    const format = document.getElementById('imgFormat').value;
+    const scale = parseFloat(document.getElementById('imgDpi').value);
+    const ext = format === 'image/png' ? 'png' : 'jpg';
+    const quality = format === 'image/jpeg' ? 0.92 : undefined;
+    const baseName = pdfFile.name.replace(/\.pdf$/i, '');
+
+    const btn = document.getElementById('convertAllBtn');
+    const gdriveBtn = document.getElementById('convertAllGDriveBtn');
+    btn.disabled = true;
+    if (gdriveBtn) gdriveBtn.disabled = true;
+
+    showProgress(5, 'Memulai konversi gambar...');
+
+    try {
+        const zip = new JSZip();
+
+        for (let i = 1; i <= totalPages; i++) {
+            const pct = Math.round(5 + (i / totalPages) * 70);
+            showProgress(pct, `Merender gambar halaman ${i} dari ${totalPages}...`);
+
+            const page = await pdfDocJs.getPage(i);
+            const viewport = page.getViewport({ scale });
+            const canvas = document.createElement('canvas');
+            canvas.width = viewport.width;
+            canvas.height = viewport.height;
+
+            const ctx = canvas.getContext('2d');
+            if (format === 'image/jpeg') {
+                ctx.fillStyle = '#ffffff';
+                ctx.fillRect(0, 0, canvas.width, canvas.height);
+            }
+
+            await page.render({ canvasContext: ctx, viewport }).promise;
+
+            const blob = await new Promise((resolve) => canvas.toBlob(resolve, format, quality));
+            zip.file(`${baseName}_halaman_${i}.${ext}`, blob);
+        }
+
+        showProgress(80, 'Mengompresi ke file ZIP...');
+        const zipBlob = await zip.generateAsync({ type: 'blob' });
+
+        uploadBlobToGDrive({
+            blob: zipBlob,
+            filename: `${baseName}_images.zip`,
+            mimeType: 'application/zip',
+            onProgress: showProgress,
+            onSuccess: (res) => {
+                showProgress(100, 'Selesai!');
+                showStatus(
+                    `✅ Arsip <strong>"${res.name}"</strong> berhasil disimpan di Google Drive! <a href="${res.webViewLink}" target="_blank" rel="noopener" style="color: var(--primary); text-decoration: underline; margin-left: 8px; font-weight: 700;">🔗 Buka di Google Drive</a>`,
+                    'success'
+                );
+            },
+            onError: (err) => {
+                showStatus('❌ Gagal mengunggah ke Google Drive: ' + err.message, 'error');
+            },
+        });
+    } catch (err) {
+        hideProgress();
+        showStatus('❌ Error: ' + err.message, 'error');
+    } finally {
+        btn.disabled = false;
+        if (gdriveBtn) gdriveBtn.disabled = false;
+    }
+}
+
 function showProgress(percent, text) {
     document.getElementById('progressSection').classList.remove('hidden');
     document.getElementById('progressBar').style.width = percent + '%';

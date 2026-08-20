@@ -264,6 +264,98 @@ async function processSplit() {
     }
 }
 
+// ─── Split & Save Directly to Google Drive ─────────────────────
+async function splitAndSaveToGDrive() {
+    if (!pdfFile) return;
+
+    if (splitMode === 'range' && selectedPages.size === 0) {
+        alert('Harap pilih minimal 1 halaman untuk diekstrak.');
+        return;
+    }
+
+    const rawName = document.getElementById('outputName').value.trim() || 'split_document';
+    const splitBtn = document.getElementById('splitBtn');
+    const gdriveBtn = document.getElementById('splitGDriveBtn');
+    splitBtn.disabled = true;
+    if (gdriveBtn) gdriveBtn.disabled = true;
+
+    showProgress(10, 'Mempersiapkan pemisahan dokumen...');
+
+    try {
+        const { PDFDocument } = PDFLib;
+        const arrayBuf = await pdfFile.arrayBuffer();
+        const srcDoc = await PDFDocument.load(arrayBuf);
+
+        if (splitMode === 'range') {
+            const newDoc = await PDFDocument.create();
+            const indices = Array.from(selectedPages).sort((a, b) => a - b).map(p => p - 1);
+            const copiedPages = await newDoc.copyPages(srcDoc, indices);
+            copiedPages.forEach(page => newDoc.addPage(page));
+
+            showProgress(75, 'Menyimpan file PDF...');
+            const pdfBytes = await newDoc.save();
+            const blob = new Blob([pdfBytes], { type: 'application/pdf' });
+
+            uploadBlobToGDrive({
+                blob,
+                filename: `${rawName}.pdf`,
+                mimeType: 'application/pdf',
+                onProgress: showProgress,
+                onSuccess: (res) => {
+                    showProgress(100, 'Selesai!');
+                    showStatus(
+                        `✅ File <strong>"${res.name}"</strong> berhasil disimpan di Google Drive! <a href="${res.webViewLink}" target="_blank" rel="noopener" style="color: var(--primary); text-decoration: underline; margin-left: 8px; font-weight: 700;">🔗 Buka di Google Drive</a>`,
+                        'success'
+                    );
+                },
+                onError: (err) => {
+                    showStatus('❌ Gagal mengunggah ke Google Drive: ' + err.message, 'error');
+                },
+            });
+        } else {
+            const zip = new JSZip();
+            const total = srcDoc.getPageCount();
+
+            for (let i = 0; i < total; i++) {
+                const pct = Math.round(10 + (i / total) * 65);
+                showProgress(pct, `Mengekstrak halaman ${i + 1} dari ${total}...`);
+
+                const singleDoc = await PDFDocument.create();
+                const [copied] = await singleDoc.copyPages(srcDoc, [i]);
+                singleDoc.addPage(copied);
+                const singleBytes = await singleDoc.save();
+                zip.file(`halaman_${i + 1}.pdf`, singleBytes);
+            }
+
+            showProgress(80, 'Mengompresi file ke format ZIP...');
+            const zipBlob = await zip.generateAsync({ type: 'blob' });
+
+            uploadBlobToGDrive({
+                blob: zipBlob,
+                filename: `${rawName}.zip`,
+                mimeType: 'application/zip',
+                onProgress: showProgress,
+                onSuccess: (res) => {
+                    showProgress(100, 'Selesai!');
+                    showStatus(
+                        `✅ Arsip <strong>"${res.name}"</strong> berhasil disimpan di Google Drive! <a href="${res.webViewLink}" target="_blank" rel="noopener" style="color: var(--primary); text-decoration: underline; margin-left: 8px; font-weight: 700;">🔗 Buka di Google Drive</a>`,
+                        'success'
+                    );
+                },
+                onError: (err) => {
+                    showStatus('❌ Gagal mengunggah ke Google Drive: ' + err.message, 'error');
+                },
+            });
+        }
+    } catch (err) {
+        hideProgress();
+        showStatus('❌ Error: ' + err.message, 'error');
+    } finally {
+        splitBtn.disabled = false;
+        if (gdriveBtn) gdriveBtn.disabled = false;
+    }
+}
+
 function downloadBlob(blob, filename) {
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');

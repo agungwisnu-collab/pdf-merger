@@ -17,8 +17,8 @@ const GDRIVE_DEFAULT_CONFIG = {
     // Project Number (Nomor Project numerik dari Google Cloud)
     APP_ID: '80487558987',
 
-    // Scope untuk membaca file dari Google Drive
-    SCOPES: 'https://www.googleapis.com/auth/drive.readonly',
+    // Scope untuk membaca dan menyimpan file ke Google Drive
+    SCOPES: 'https://www.googleapis.com/auth/drive.file https://www.googleapis.com/auth/drive.readonly',
 };
 
 // Mengambil konfigurasi aktif (prioritas dari localStorage jika pernah diinput lewat UI)

@@ -164,6 +164,99 @@ async function compressAndDownload() {
     }
 }
 
+// ─── Compress & Save Directly to Google Drive ──────────────────
+async function compressAndSaveToGDrive() {
+    if (!pdfDocJs || !pdfFile) return;
+
+    const compLevel = currentLevel;
+    const rawName = document.getElementById('outputName').value.trim() || 'compressed_document';
+    const outputName = (rawName.endsWith('.pdf') ? rawName : rawName + '.pdf');
+
+    const btn = document.getElementById('compressBtn');
+    const gdriveBtn = document.getElementById('compressGDriveBtn');
+    btn.disabled = true;
+    if (gdriveBtn) gdriveBtn.disabled = true;
+
+    showProgress(5, 'Mengoptimalkan kompresi dokumen...');
+
+    let scale = 1.3;
+    let quality = 0.72;
+
+    if (compLevel === 'extreme') {
+        scale = 1.0;
+        quality = 0.58;
+    } else if (compLevel === 'low') {
+        scale = 1.8;
+        quality = 0.85;
+    }
+
+    try {
+        const { PDFDocument } = PDFLib;
+        const newPdfDoc = await PDFDocument.create();
+
+        for (let i = 1; i <= totalPages; i++) {
+            const pct = Math.round(5 + (i / totalPages) * 70);
+            showProgress(pct, `Mengompresi lembar ${i} dari ${totalPages}...`);
+
+            const page = await pdfDocJs.getPage(i);
+            const viewport = page.getViewport({ scale });
+            const canvas = document.createElement('canvas');
+            canvas.width = viewport.width;
+            canvas.height = viewport.height;
+
+            const ctx = canvas.getContext('2d');
+            ctx.fillStyle = '#ffffff';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            await page.render({ canvasContext: ctx, viewport }).promise;
+
+            const blob = await new Promise((resolve) => canvas.toBlob(resolve, 'image/jpeg', quality));
+            const imgBytes = new Uint8Array(await blob.arrayBuffer());
+            const embedded = await newPdfDoc.embedJpg(imgBytes);
+
+            const origVp = page.getViewport({ scale: 1.0 });
+            const newPage = newPdfDoc.addPage([origVp.width, origVp.height]);
+            newPage.drawImage(embedded, {
+                x: 0,
+                y: 0,
+                width: origVp.width,
+                height: origVp.height,
+            });
+        }
+
+        showProgress(80, 'Menyimpan dokumen PDF...');
+        const pdfBytes = await newPdfDoc.save();
+        const compressedBlob = new Blob([pdfBytes], { type: 'application/pdf' });
+
+        const originalSize = pdfFile.size;
+        const newSize = compressedBlob.size;
+        const savingPct = Math.max(0, Math.round(((originalSize - newSize) / originalSize) * 100));
+
+        uploadBlobToGDrive({
+            blob: compressedBlob,
+            filename: outputName,
+            mimeType: 'application/pdf',
+            onProgress: showProgress,
+            onSuccess: (res) => {
+                showProgress(100, 'Selesai!');
+                showStatus(
+                    `✅ Dokumen <strong>"${res.name}"</strong> berhasil dikompresi (Hemat ${savingPct}%) dan disimpan di Google Drive! <a href="${res.webViewLink}" target="_blank" rel="noopener" style="color: var(--primary); text-decoration: underline; margin-left: 8px; font-weight: 700;">🔗 Buka di Google Drive</a>`,
+                    'success'
+                );
+            },
+            onError: (err) => {
+                showStatus('❌ Gagal mengunggah ke Google Drive: ' + err.message, 'error');
+            },
+        });
+    } catch (err) {
+        hideProgress();
+        showStatus('❌ Error: ' + err.message, 'error');
+    } finally {
+        btn.disabled = false;
+        if (gdriveBtn) gdriveBtn.disabled = false;
+    }
+}
+
 function showProgress(percent, text) {
     document.getElementById('progressSection').classList.remove('hidden');
     document.getElementById('progressBar').style.width = percent + '%';

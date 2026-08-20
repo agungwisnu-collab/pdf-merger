@@ -309,3 +309,119 @@ function closeGDriveConfigModal() {
     const modal = document.getElementById('gdriveConfigModal');
     if (modal) modal.classList.add('hidden');
 }
+
+// ─── Upload File Blob ke Google Drive via REST API v3 ──────────
+/**
+ * Upload file Blob langsung ke Google Drive pengguna
+ * @param {Object} options
+ * @param {Blob} options.blob - File Blob yang akan diupload
+ * @param {string} options.filename - Nama file di Google Drive
+ * @param {string} options.mimeType - Tipe MIME file (default: 'application/pdf')
+ * @param {Function} options.onProgress - Callback progres upload (persen, teks)
+ * @param {Function} options.onSuccess - Callback sukses ({ id, name, webViewLink })
+ * @param {Function} options.onError - Callback gagal (error)
+ */
+async function uploadBlobToGDrive(options = {}) {
+    const config = getGDriveConfig();
+    if (!config.CLIENT_ID || !config.API_KEY) {
+        showGDriveConfigModal(() => uploadBlobToGDrive(options));
+        return;
+    }
+
+    const { blob, filename, mimeType = 'application/pdf', onProgress, onSuccess, onError } = options;
+    if (!blob) {
+        const err = new Error('File tidak ditemukan.');
+        if (onError) onError(err);
+        else alert(err.message);
+        return;
+    }
+
+    if (onProgress) onProgress(10, 'Menghubungkan ke Google Drive...');
+    showGDriveLoading('Menghubungkan ke Google Drive...');
+
+    try {
+        await loadGoogleScripts();
+
+        const doUpload = async (token) => {
+            try {
+                if (onProgress) onProgress(30, 'Mengunggah file ke Google Drive...');
+                showGDriveLoading(`Mengunggah "${filename}" ke Google Drive...`);
+
+                const metadata = {
+                    name: filename,
+                    mimeType: mimeType,
+                };
+
+                const boundary = '-------314159265358979323846';
+                const delimiter = "\r\n--" + boundary + "\r\n";
+                const close_delim = "\r\n--" + boundary + "--";
+
+                const metadataPart = delimiter +
+                    'Content-Type: application/json; charset=UTF-8\r\n\r\n' +
+                    JSON.stringify(metadata);
+
+                const arrayBuffer = await blob.arrayBuffer();
+                const uint8Array = new Uint8Array(arrayBuffer);
+
+                const mediaHeader = delimiter +
+                    'Content-Type: ' + mimeType + '\r\n\r\n';
+
+                const enc = new TextEncoder();
+                const part1 = enc.encode(metadataPart);
+                const part2 = enc.encode(mediaHeader);
+                const part4 = enc.encode(close_delim);
+
+                const combinedLength = part1.length + part2.length + uint8Array.length + part4.length;
+                const combinedBody = new Uint8Array(combinedLength);
+
+                let offset = 0;
+                combinedBody.set(part1, offset); offset += part1.length;
+                combinedBody.set(part2, offset); offset += part2.length;
+                combinedBody.set(uint8Array, offset); offset += uint8Array.length;
+                combinedBody.set(part4, offset);
+
+                const response = await fetch('https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart&fields=id,name,webViewLink', {
+                    method: 'POST',
+                    headers: {
+                        Authorization: `Bearer ${token}`,
+                        'Content-Type': 'multipart/related; boundary="' + boundary + '"',
+                    },
+                    body: combinedBody,
+                });
+
+                if (!response.ok) {
+                    const errData = await response.json().catch(() => ({}));
+                    throw new Error(errData.error?.message || `HTTP ${response.status}: Gagal mengunggah file`);
+                }
+
+                const result = await response.json();
+                hideGDriveLoading();
+                if (onProgress) onProgress(100, 'Selesai diunggah ke Google Drive!');
+                if (onSuccess) onSuccess(result);
+                else {
+                    alert(`✅ Berhasil disimpan ke Google Drive: ${result.name}`);
+                }
+            } catch (uploadErr) {
+                hideGDriveLoading();
+                console.error('Error saat upload ke GDrive:', uploadErr);
+                if (onError) onError(uploadErr);
+                else alert('Gagal mengunggah ke Google Drive: ' + uploadErr.message);
+            }
+        };
+
+        initTokenClient(config, (token) => {
+            doUpload(token);
+        });
+
+        if (!gdriveAccessToken) {
+            gdriveTokenClient.requestAccessToken({ prompt: '' });
+        } else {
+            doUpload(gdriveAccessToken);
+        }
+    } catch (err) {
+        hideGDriveLoading();
+        if (onError) onError(err);
+        else alert('Error Google Drive: ' + err.message);
+    }
+}
+

@@ -141,6 +141,83 @@ async function protectAndDownload() {
     }
 }
 
+// ─── Encrypt & Save Directly to Google Drive ───────────────────
+async function protectAndSaveToGDrive() {
+    if (!pdfFile) return;
+
+    const pass = document.getElementById('pdfPassword').value;
+    const confirmPass = document.getElementById('pdfPasswordConfirm').value;
+
+    if (!pass) {
+        alert('Harap masukkan kata sandi (password).');
+        return;
+    }
+    if (pass !== confirmPass) {
+        alert('Konfirmasi kata sandi tidak cocok. Harap periksa kembali.');
+        return;
+    }
+
+    const rawName = document.getElementById('outputName').value.trim() || 'protected_document';
+    const outputName = (rawName.endsWith('.pdf') ? rawName : rawName + '.pdf');
+    const btn = document.getElementById('protectBtn');
+    const gdriveBtn = document.getElementById('protectGDriveBtn');
+    btn.disabled = true;
+    if (gdriveBtn) gdriveBtn.disabled = true;
+
+    showProgress(15, 'Menerapkan enkripsi password...');
+
+    try {
+        const { PDFDocument } = PDFLib;
+        const arrayBuf = await pdfFile.arrayBuffer();
+        const pdfDoc = await PDFDocument.load(arrayBuf);
+
+        showProgress(50, 'Mengunci dokumen dengan algoritma keamanan...');
+
+        if (typeof pdfDoc.encrypt === 'function') {
+            pdfDoc.encrypt({
+                userPassword: pass,
+                ownerPassword: pass,
+                permissions: {
+                    printing: 'highResolution',
+                    modifying: false,
+                    copying: false,
+                    annotating: false,
+                    fillingForms: false,
+                    contentAccessibility: true,
+                    documentAssembly: false,
+                },
+            });
+        }
+
+        showProgress(80, 'Menyimpan file PDF...');
+        const pdfBytes = await pdfDoc.save();
+        const blob = new Blob([pdfBytes], { type: 'application/pdf' });
+
+        uploadBlobToGDrive({
+            blob,
+            filename: outputName,
+            mimeType: 'application/pdf',
+            onProgress: showProgress,
+            onSuccess: (res) => {
+                showProgress(100, 'Selesai!');
+                showStatus(
+                    `✅ Dokumen terenkripsi <strong>"${res.name}"</strong> berhasil disimpan di Google Drive! <a href="${res.webViewLink}" target="_blank" rel="noopener" style="color: var(--primary); text-decoration: underline; margin-left: 8px; font-weight: 700;">🔗 Buka di Google Drive</a>`,
+                    'success'
+                );
+            },
+            onError: (err) => {
+                showStatus('❌ Gagal mengunggah ke Google Drive: ' + err.message, 'error');
+            },
+        });
+    } catch (err) {
+        hideProgress();
+        showStatus('❌ Error: ' + err.message, 'error');
+    } finally {
+        btn.disabled = false;
+        if (gdriveBtn) gdriveBtn.disabled = false;
+    }
+}
+
 function showProgress(percent, text) {
     document.getElementById('progressSection').classList.remove('hidden');
     document.getElementById('progressBar').style.width = percent + '%';

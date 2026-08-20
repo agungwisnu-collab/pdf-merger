@@ -145,13 +145,18 @@ function renderFileList() {
         fileSection.classList.add('hidden');
         outputSection.classList.add('hidden');
         mergeBtn.disabled = true;
+        const gdriveBtn = document.getElementById('mergeGDriveBtn');
+        if (gdriveBtn) gdriveBtn.disabled = true;
         return;
     }
 
     fileSection.classList.remove('hidden');
     outputSection.classList.remove('hidden');
     fileCount.textContent = pdfItems.length;
-    mergeBtn.disabled = pdfItems.length < 2;
+    const isReady = pdfItems.length >= 2;
+    mergeBtn.disabled = !isReady;
+    const gdriveBtn = document.getElementById('mergeGDriveBtn');
+    if (gdriveBtn) gdriveBtn.disabled = !isReady;
 
     list.innerHTML = pdfItems.map((item, index) => {
         const thumb = item.thumbnail
@@ -395,7 +400,79 @@ async function mergePDFs() {
         hideProgress();
         showStatus('❌ Error: ' + error.message, 'error');
     } finally {
-        mergeBtn.disabled = pdfItems.length < 2;
+        const isReady = pdfItems.length >= 2;
+        mergeBtn.disabled = !isReady;
+        const gdriveBtn = document.getElementById('mergeGDriveBtn');
+        if (gdriveBtn) gdriveBtn.disabled = !isReady;
+    }
+}
+
+// ─── Merge & Save Directly to Google Drive ─────────────────────
+async function mergeAndSaveToGDrive() {
+    if (pdfItems.length < 2) return;
+
+    const rawName    = document.getElementById('outputName').value.trim();
+    const outputName = (rawName || 'merged_output').replace(/\.pdf$/i, '') + '.pdf';
+
+    const mergeBtn   = document.getElementById('mergeBtn');
+    const gdriveBtn  = document.getElementById('mergeGDriveBtn');
+    mergeBtn.disabled  = true;
+    if (gdriveBtn) gdriveBtn.disabled = true;
+
+    showProgress(0, 'Menyiapkan penggabungan PDF...');
+    hideStatus();
+
+    try {
+        const { PDFDocument } = PDFLib;
+        const mergedPdf = await PDFDocument.create();
+
+        const activeItems = pdfItems.filter(item => item.selectedPages.size > 0);
+        if (activeItems.length === 0) throw new Error('Tidak ada halaman yang dipilih untuk digabung.');
+        if (activeItems.length < 2) throw new Error('Minimal 2 file harus memiliki halaman yang dipilih.');
+
+        const total = activeItems.length;
+
+        for (let i = 0; i < total; i++) {
+            const item = activeItems[i];
+            const pct  = Math.round((i / total) * 70);
+            showProgress(pct, `Menggabungkan: ${item.file.name} (${i + 1}/${total})`);
+
+            const arrayBuffer = await item.file.arrayBuffer();
+            const pdf = await PDFDocument.load(arrayBuffer);
+
+            const pageIndices = getSortedPages(item.selectedPages).map(p => p - 1);
+            const pages = await mergedPdf.copyPages(pdf, pageIndices);
+            pages.forEach(page => mergedPdf.addPage(page));
+        }
+
+        showProgress(75, 'Menyimpan dokumen PDF...');
+        const mergedPdfBytes = await mergedPdf.save();
+        const blob = new Blob([mergedPdfBytes], { type: 'application/pdf' });
+
+        uploadBlobToGDrive({
+            blob,
+            filename: outputName,
+            mimeType: 'application/pdf',
+            onProgress: (p, text) => showProgress(p, text),
+            onSuccess: (res) => {
+                showProgress(100, 'Selesai!');
+                showStatus(
+                    `✅ Dokumen <strong>"${res.name}"</strong> berhasil disimpan di Google Drive Anda! <a href="${res.webViewLink}" target="_blank" rel="noopener" style="color: var(--primary); text-decoration: underline; margin-left: 8px; font-weight: 700;">🔗 Buka File di Google Drive</a>`,
+                    'success'
+                );
+            },
+            onError: (err) => {
+                showStatus('❌ Gagal mengunggah ke Google Drive: ' + err.message, 'error');
+            },
+        });
+
+    } catch (error) {
+        hideProgress();
+        showStatus('❌ Error: ' + error.message, 'error');
+    } finally {
+        const isReady = pdfItems.length >= 2;
+        mergeBtn.disabled = !isReady;
+        if (gdriveBtn) gdriveBtn.disabled = !isReady;
     }
 }
 
@@ -413,7 +490,7 @@ function hideProgress() {
 
 function showStatus(msg, type) {
     const box = document.getElementById('statusBox');
-    box.textContent = msg;
+    box.innerHTML = msg;
     box.className   = `status-box ${type}`;
     box.classList.remove('hidden');
 }

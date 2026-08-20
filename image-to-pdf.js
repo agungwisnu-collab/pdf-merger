@@ -373,7 +373,106 @@ async function convertToPDF() {
         hideProgress();
         showStatus('❌ Error: ' + error.message, 'error');
     } finally {
-        convertBtn.disabled = imageItems.length === 0;
+        const isReady = imageItems.length > 0;
+        convertBtn.disabled = !isReady;
+        const gdriveBtn = document.getElementById('convertGDriveBtn');
+        if (gdriveBtn) gdriveBtn.disabled = !isReady;
+    }
+}
+
+// ─── Convert Images & Save to Google Drive ─────────────────────
+async function convertAndSaveToGDrive() {
+    if (imageItems.length === 0) return;
+
+    const pageSizeKey = document.getElementById('pageSize').value;
+    const fitMode     = document.getElementById('fitMode').value;
+    const rawName     = document.getElementById('outputName').value.trim();
+    const outputName  = (rawName || 'images_to_pdf').replace(/\.pdf$/i, '') + '.pdf';
+    const MARGIN      = 20;
+
+    const convertBtn  = document.getElementById('convertBtn');
+    const gdriveBtn   = document.getElementById('convertGDriveBtn');
+    convertBtn.disabled = true;
+    if (gdriveBtn) gdriveBtn.disabled = true;
+
+    showProgress(0, 'Menyiapkan konversi gambar...');
+    hideStatus();
+
+    try {
+        const { PDFDocument } = PDFLib;
+        const pdfDoc = await PDFDocument.create();
+        const total  = imageItems.length;
+
+        for (let i = 0; i < total; i++) {
+            const item = imageItems[i];
+            const pct  = Math.round((i / total) * 70);
+            showProgress(pct, `Memproses lembar #${i + 1}: ${item.file.name}...`);
+
+            const processed = await getProcessedImageBytes(item);
+
+            const embeddedImg = processed.type === 'jpeg'
+                ? await pdfDoc.embedJpg(processed.bytes)
+                : await pdfDoc.embedPng(processed.bytes);
+
+            const imgW = embeddedImg.width;
+            const imgH = embeddedImg.height;
+
+            let pageW, pageH;
+            if (pageSizeKey === 'fit') {
+                pageW = imgW;
+                pageH = imgH;
+            } else {
+                [pageW, pageH] = PAGE_SIZES[pageSizeKey];
+            }
+
+            const page = pdfDoc.addPage([pageW, pageH]);
+            const margin  = pageSizeKey === 'fit' ? 0 : MARGIN;
+            const availW  = pageW - margin * 2;
+            const availH  = pageH - margin * 2;
+
+            let scale;
+            if (fitMode === 'fill' && pageSizeKey !== 'fit') {
+                scale = Math.max(availW / imgW, availH / imgH);
+            } else {
+                scale = Math.min(availW / imgW, availH / imgH);
+            }
+
+            const drawW = imgW * scale;
+            const drawH = imgH * scale;
+            const drawX = margin + (availW - drawW) / 2;
+            const drawY = margin + (availH - drawH) / 2;
+
+            page.drawImage(embeddedImg, { x: drawX, y: drawY, width: drawW, height: drawH });
+        }
+
+        showProgress(75, 'Menyimpan dokumen PDF...');
+        const pdfBytes = await pdfDoc.save();
+        const blob = new Blob([pdfBytes], { type: 'application/pdf' });
+
+        uploadBlobToGDrive({
+            blob,
+            filename: outputName,
+            mimeType: 'application/pdf',
+            onProgress: (p, text) => showProgress(p, text),
+            onSuccess: (res) => {
+                showProgress(100, 'Selesai!');
+                showStatus(
+                    `✅ File PDF <strong>"${res.name}"</strong> berhasil disimpan di Google Drive Anda! <a href="${res.webViewLink}" target="_blank" rel="noopener" style="color: var(--primary); text-decoration: underline; margin-left: 8px; font-weight: 700;">🔗 Buka File di Google Drive</a>`,
+                    'success'
+                );
+            },
+            onError: (err) => {
+                showStatus('❌ Gagal mengunggah ke Google Drive: ' + err.message, 'error');
+            },
+        });
+
+    } catch (error) {
+        hideProgress();
+        showStatus('❌ Error: ' + error.message, 'error');
+    } finally {
+        const isReady = imageItems.length > 0;
+        convertBtn.disabled = !isReady;
+        if (gdriveBtn) gdriveBtn.disabled = !isReady;
     }
 }
 
@@ -391,7 +490,7 @@ function hideProgress() {
 
 function showStatus(msg, type) {
     const box = document.getElementById('statusBox');
-    box.textContent = msg;
+    box.innerHTML = msg;
     box.className   = `status-box ${type}`;
     box.classList.remove('hidden');
 }
