@@ -391,40 +391,79 @@ async function splitAndSaveToGDrive() {
                 },
             });
         } else {
-            const zip = new JSZip();
+            const format = document.getElementById('splitFormat').value;
             const total = srcDoc.getPageCount();
 
-            for (let i = 0; i < total; i++) {
-                const pct = Math.round(10 + (i / total) * 65);
-                showProgress(pct, `Mengekstrak halaman ${i + 1} dari ${total}...`);
+            if (format === 'zip') {
+                const zip = new JSZip();
+                for (let i = 0; i < total; i++) {
+                    const pct = Math.round(10 + (i / total) * 65);
+                    showProgress(pct, `Mengekstrak halaman ${i + 1} dari ${total}...`);
 
-                const singleDoc = await PDFDocument.create();
-                const [copied] = await singleDoc.copyPages(srcDoc, [i]);
-                singleDoc.addPage(copied);
-                const singleBytes = await singleDoc.save();
-                zip.file(`halaman_${i + 1}.pdf`, singleBytes);
+                    const singleDoc = await PDFDocument.create();
+                    const [copied] = await singleDoc.copyPages(srcDoc, [i]);
+                    singleDoc.addPage(copied);
+                    const singleBytes = await singleDoc.save();
+                    zip.file(`${rawName}_halaman_${i + 1}.pdf`, singleBytes);
+                }
+
+                showProgress(80, 'Mengompresi file ke format ZIP...');
+                const zipBlob = await zip.generateAsync({ type: 'blob' });
+
+                uploadBlobToGDrive({
+                    blob: zipBlob,
+                    filename: `${rawName}.zip`,
+                    mimeType: 'application/zip',
+                    onProgress: showProgress,
+                    onSuccess: (res) => {
+                        showProgress(100, 'Selesai!');
+                        const loc = res.folderName ? `di folder <strong>"${res.folderName}"</strong>` : 'di Google Drive Anda';
+                        showStatus(
+                            `✅ Arsip <strong>"${res.name}"</strong> berhasil disimpan ${loc}! <a href="${res.webViewLink}" target="_blank" rel="noopener" style="color: var(--primary); text-decoration: underline; margin-left: 8px; font-weight: 700;">🔗 Buka di Google Drive</a>`,
+                            'success'
+                        );
+                    },
+                    onError: (err) => {
+                        showStatus('❌ Gagal mengunggah ke Google Drive: ' + err.message, 'error');
+                    },
+                });
+            } else {
+                // Mode Single: Upload every page as individual PDF to Google Drive
+                const itemsToUpload = [];
+                for (let i = 0; i < total; i++) {
+                    const pct = Math.round(10 + (i / total) * 50);
+                    showProgress(pct, `Menyiapkan lembar ${i + 1} dari ${total}...`);
+
+                    const singleDoc = await PDFDocument.create();
+                    const [copied] = await singleDoc.copyPages(srcDoc, [i]);
+                    singleDoc.addPage(copied);
+                    const singleBytes = await singleDoc.save();
+                    const blob = new Blob([singleBytes], { type: 'application/pdf' });
+
+                    itemsToUpload.push({
+                        blob,
+                        filename: `${rawName}_halaman_${i + 1}.pdf`,
+                        mimeType: 'application/pdf',
+                    });
+                }
+
+                uploadMultipleBlobsToGDrive({
+                    items: itemsToUpload,
+                    titleDesc: rawName,
+                    onProgress: showProgress,
+                    onSuccess: (res) => {
+                        showProgress(100, 'Selesai!');
+                        const loc = res.folderName ? `di folder <strong>"${res.folderName}"</strong>` : 'di Google Drive Anda';
+                        showStatus(
+                            `✅ Seluruh <strong>${res.count} file PDF satuan</strong> berhasil disimpan ${loc}!`,
+                            'success'
+                        );
+                    },
+                    onError: (err) => {
+                        showStatus('❌ Gagal mengunggah ke Google Drive: ' + err.message, 'error');
+                    },
+                });
             }
-
-            showProgress(80, 'Mengompresi file ke format ZIP...');
-            const zipBlob = await zip.generateAsync({ type: 'blob' });
-
-            uploadBlobToGDrive({
-                blob: zipBlob,
-                filename: `${rawName}.zip`,
-                mimeType: 'application/zip',
-                onProgress: showProgress,
-                onSuccess: (res) => {
-                    showProgress(100, 'Selesai!');
-                    const loc = res.folderName ? `di folder <strong>"${res.folderName}"</strong>` : 'di Google Drive Anda';
-                    showStatus(
-                        `✅ Arsip <strong>"${res.name}"</strong> berhasil disimpan ${loc}! <a href="${res.webViewLink}" target="_blank" rel="noopener" style="color: var(--primary); text-decoration: underline; margin-left: 8px; font-weight: 700;">🔗 Buka di Google Drive</a>`,
-                        'success'
-                    );
-                },
-                onError: (err) => {
-                    showStatus('❌ Gagal mengunggah ke Google Drive: ' + err.message, 'error');
-                },
-            });
         }
     } catch (err) {
         hideProgress();

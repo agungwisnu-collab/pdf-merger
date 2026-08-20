@@ -547,3 +547,144 @@ async function uploadBlobToGDrive(options = {}) {
     });
 }
 
+// ─── Helper Upload Single Blob dengan Token yang Ada ────────────
+async function uploadSingleBlobWithToken(token, blob, filename, mimeType = 'application/pdf', folderId = null) {
+    const metadata = {
+        name: filename,
+        mimeType: mimeType,
+    };
+    if (folderId) metadata.parents = [folderId];
+
+    const boundary = '-------314159265358979323846';
+    const delimiter = "\r\n--" + boundary + "\r\n";
+    const close_delim = "\r\n--" + boundary + "--";
+
+    const metadataPart = delimiter +
+        'Content-Type: application/json; charset=UTF-8\r\n\r\n' +
+        JSON.stringify(metadata);
+
+    const arrayBuffer = await blob.arrayBuffer();
+    const uint8Array = new Uint8Array(arrayBuffer);
+
+    const mediaHeader = delimiter +
+        'Content-Type: ' + mimeType + '\r\n\r\n';
+
+    const enc = new TextEncoder();
+    const part1 = enc.encode(metadataPart);
+    const part2 = enc.encode(mediaHeader);
+    const part4 = enc.encode(close_delim);
+
+    const combinedLength = part1.length + part2.length + uint8Array.length + part4.length;
+    const combinedBody = new Uint8Array(combinedLength);
+
+    let offset = 0;
+    combinedBody.set(part1, offset); offset += part1.length;
+    combinedBody.set(part2, offset); offset += part2.length;
+    combinedBody.set(uint8Array, offset); offset += uint8Array.length;
+    combinedBody.set(part4, offset);
+
+    const response = await fetch('https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart&fields=id,name,webViewLink', {
+        method: 'POST',
+        headers: {
+            Authorization: `Bearer ${token}`,
+            'Content-Type': 'multipart/related; boundary="' + boundary + '"',
+        },
+        body: combinedBody,
+    });
+
+    if (!response.ok) {
+        const errData = await response.json().catch(() => ({}));
+        throw new Error(errData.error?.message || `HTTP ${response.status}: Gagal mengunggah file`);
+    }
+
+    return await response.json();
+}
+
+// ─── Upload Multiple Blobs (File Satuan) ke Google Drive ────────
+/**
+ * Upload banyak file satuan ke Google Drive pengguna dengan pilihan folder
+ * @param {Object} options
+ * @param {Array<{blob: Blob, filename: string, mimeType: string}>} options.items
+ * @param {string} options.titleDesc - Deskripsi nama dokumen
+ * @param {Function} options.onProgress - callback(percent, text)
+ * @param {Function} options.onSuccess - callback({ count, folderName, folderId })
+ * @param {Function} options.onError - callback(err)
+ */
+async function uploadMultipleBlobsToGDrive(options = {}) {
+    const config = getGDriveConfig();
+    if (!config.CLIENT_ID || !config.API_KEY) {
+        showGDriveConfigModal(() => uploadMultipleBlobsToGDrive(options));
+        return;
+    }
+
+    const { items = [], titleDesc = 'File Satuan', onProgress, onSuccess, onError } = options;
+    if (items.length === 0) {
+        const err = new Error('Tidak ada file untuk diunggah.');
+        if (onError) onError(err);
+        else alert(err.message);
+        return;
+    }
+
+    showGDriveDestinationModal(`${items.length} file satuan (${titleDesc})`, async (destChoice) => {
+        if (onProgress) onProgress(10, 'Menghubungkan ke Google Drive...');
+        showGDriveLoading('Menghubungkan ke Google Drive...');
+
+        try {
+            await loadGoogleScripts();
+
+            const executeUploadAll = async (token, folderId = null, folderName = null) => {
+                try {
+                    const total = items.length;
+                    const results = [];
+
+                    for (let i = 0; i < total; i++) {
+                        const item = items[i];
+                        const pct = Math.round(10 + ((i + 1) / total) * 85);
+                        const msg = `Mengunggah (${i + 1}/${total}): "${item.filename}"...`;
+                        if (onProgress) onProgress(pct, msg);
+                        showGDriveLoading(msg);
+
+                        const res = await uploadSingleBlobWithToken(token, item.blob, item.filename, item.mimeType || 'application/pdf', folderId);
+                        results.push(res);
+                    }
+
+                    hideGDriveLoading();
+                    if (onProgress) onProgress(100, 'Selesai!');
+                    if (onSuccess) onSuccess({ count: total, folderName, folderId, results });
+                } catch (uploadErr) {
+                    hideGDriveLoading();
+                    if (onError) onError(uploadErr);
+                    else alert('Gagal mengunggah ke Google Drive: ' + uploadErr.message);
+                }
+            };
+
+            const handleTokenReady = (token) => {
+                if (destChoice.type === 'folder') {
+                    hideGDriveLoading();
+                    openGDriveFolderPicker(token, config, (folder) => {
+                        executeUploadAll(token, folder.id, folder.name);
+                    }, () => {
+                        if (onProgress) onProgress(0, '');
+                    });
+                } else {
+                    executeUploadAll(token, null, null);
+                }
+            };
+
+            initTokenClient(config, (token) => {
+                handleTokenReady(token);
+            });
+
+            if (!gdriveAccessToken) {
+                gdriveTokenClient.requestAccessToken({ prompt: '' });
+            } else {
+                handleTokenReady(gdriveAccessToken);
+            }
+        } catch (err) {
+            hideGDriveLoading();
+            if (onError) onError(err);
+            else alert('Error Google Drive: ' + err.message);
+        }
+    });
+}
+
