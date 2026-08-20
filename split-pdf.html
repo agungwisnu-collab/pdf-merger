@@ -3,15 +3,12 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>PDF Merger — Gabungkan Dokumen PDF Gratis & Aman</title>
+    <title>Pisah PDF — Ekstrak Halaman Dokumen PDF Gratis Online</title>
     <link rel="stylesheet" href="style.css">
-    <!-- Theme Controller (Anti-flash) -->
     <script src="theme.js"></script>
-    <!-- pdf-lib: merge engine -->
     <script src="https://unpkg.com/pdf-lib@1.17.1/dist/pdf-lib.min.js"></script>
-    <!-- PDF.js: thumbnail & page count -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
-    <link rel="manifest" href="manifest.json">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
 </head>
 <body>
     <!-- Universal Navbar -->
@@ -23,9 +20,9 @@
                 <span class="brand-badge">PRO</span>
             </a>
             <div class="nav-tabs">
-                <a href="index.html" class="nav-tab active">📄 Gabungkan</a>
-                <a href="split-pdf.html" class="nav-tab">✂️ Pisahkan</a>
-                <a href="image-to-pdf.html" class="nav-tab">🖼️ Gambar ke PDF</a>
+                <a href="index.html" class="nav-tab">📄 Gabungkan</a>
+                <a href="split-pdf.html" class="nav-tab active">✂️ Pisahkan</a>
+                <a href="organize-pdf.html" class="nav-tab">🗂️ Susun</a>
                 <div class="nav-dropdown">
                     <button class="nav-dropdown-btn" onclick="toggleToolsDropdown(event)">
                         <span>✨ Semua Alat</span>
@@ -35,11 +32,11 @@
                         <div class="mega-menu-grid">
                             <div>
                                 <div class="mega-category-title">Organisir &amp; Susun</div>
-                                <a href="index.html" class="mega-menu-item active">
+                                <a href="index.html" class="mega-menu-item">
                                     <span class="mega-item-icon">📄</span>
                                     <div class="mega-item-text"><span class="mega-item-title">Gabungkan PDF</span><span class="mega-item-desc">Satukan multi PDF</span></div>
                                 </a>
-                                <a href="split-pdf.html" class="mega-menu-item">
+                                <a href="split-pdf.html" class="mega-menu-item active">
                                     <span class="mega-item-icon">✂️</span>
                                     <div class="mega-item-text"><span class="mega-item-title">Pisahkan PDF</span><span class="mega-item-desc">Ekstrak rentang hal</span></div>
                                 </a>
@@ -102,70 +99,90 @@
         </div>
     </nav>
 
-    <!-- Main Container -->
+    <!-- Main Wrapper -->
     <main class="main-wrapper">
         <div class="container">
-            <!-- Header -->
             <div class="header">
-                <h1>📄 PDF Merger</h1>
-                <p>Gabungkan beberapa dokumen PDF menjadi satu — cepat, mudah, dan aman.<br>File <strong>tidak dikirim ke server</strong>, seluruh proses diolah langsung di browser kamu.</p>
+                <h1>✂️ Pisahkan Dokumen PDF</h1>
+                <p>Ekstrak rentang halaman tertentu atau pisahkan seluruh halaman PDF menjadi dokumen mandiri.<br>Diproses <strong>100% di browser</strong> tanpa server.</p>
             </div>
 
             <!-- Upload Area -->
-            <div class="upload-area" id="dropZone">
-                <div class="upload-icon">⬆️</div>
-                <p class="upload-title">Drag & Drop file PDF di sini</p>
-                <p class="upload-sub">atau gunakan opsi di bawah</p>
-                <input type="file" id="fileInput" multiple accept=".pdf" hidden>
+            <div id="uploadSection" class="upload-area" id="dropZone">
+                <div class="upload-icon">✂️</div>
+                <p class="upload-title">Drag &amp; Drop file PDF di sini</p>
+                <p class="upload-sub">atau pilih dari perangkat / Google Drive</p>
+                <input type="file" id="pdfInput" accept=".pdf" hidden>
                 <div class="upload-btn-group">
-                    <button class="btn btn-primary" onclick="document.getElementById('fileInput').click()">
-                        Pilih File PDF
-                    </button>
-                    <button class="btn-gdrive" onclick="pickFromGDrive()">
+                    <button class="btn btn-primary" onclick="document.getElementById('pdfInput').click()">Pilih Dokumen PDF</button>
+                    <button class="btn-gdrive" onclick="pickPDFFromGDrive()">
                         <svg viewBox="0 0 87.3 78" xmlns="http://www.w3.org/2000/svg"><path d="m6.6 66.85 3.85 6.65c.8 1.4 1.95 2.5 3.3 3.3l13.75-23.8h-27.5c0 1.55.4 3.1 1.2 4.5z" fill="#0066da"/><path d="m43.65 25-13.75-23.8c-1.35.8-2.5 1.9-3.3 3.3l-25.4 44c-.8 1.4-1.2 2.95-1.2 4.5h27.5z" fill="#00ac47"/><path d="m73.55 76.8c1.35-.8 2.5-1.9 3.3-3.3l1.6-2.75 7.65-13.25c.8-1.4 1.2-2.95 1.2-4.5h-27.502l5.852 11.5z" fill="#ea4335"/><path d="m43.65 25 13.75-23.8c-1.35-.8-2.9-1.2-4.5-1.2h-18.5c-1.6 0-3.15.45-4.5 1.2z" fill="#00832d"/><path d="m59.8 53h-32.3l-13.75 23.8c1.35.8 2.9 1.2 4.5 1.2h50.8c1.6 0 3.15-.45 4.5-1.2z" fill="#2684fc"/><path d="m73.4 26.5-12.7-22c-.8-1.4-1.95-2.5-3.3-3.3l-13.75 23.8 16.15 28h27.45c0-1.55-.4-3.1-1.2-4.5z" fill="#ffba00"/></svg>
                         Google Drive
                     </button>
                 </div>
             </div>
 
-            <!-- File List -->
-            <div id="fileSection" class="file-section hidden">
+            <!-- Workspace Section -->
+            <div id="workspaceSection" class="hidden">
                 <div class="file-section-header">
-                    <h3>📋 File yang Dipilih (<span id="fileCount">0</span>)</h3>
-                    <button class="btn btn-danger-outline" onclick="clearAll()">🗑️ Hapus Semua</button>
+                    <div>
+                        <h3 id="docTitle">📄 document.pdf</h3>
+                        <p id="docMeta" style="font-size: 0.8rem; color: var(--text-muted);">5 Halaman · 1.2 MB</p>
+                    </div>
+                    <button class="btn btn-danger-outline btn-sm" onclick="clearFile()">🔄 Ganti Dokumen</button>
                 </div>
-                <p class="drag-hint">💡 Drag file untuk mengubah urutan gabungan</p>
-                <ul id="fileList"></ul>
-            </div>
 
-            <!-- Output Filename -->
-            <div id="outputSection" class="output-section hidden">
-                <label for="outputName">💾 Nama file output:</label>
-                <div class="output-input-row">
-                    <input type="text" id="outputName" class="output-input" placeholder="nama_file_output" value="merged_output" />
-                    <span class="output-ext">.pdf</span>
+                <!-- Mode Selection -->
+                <div class="mode-cards-grid" style="margin-top: 16px;">
+                    <div class="mode-card active" id="modeRangeCard" onclick="setSplitMode('range')">
+                        <div class="mode-card-title">📑 Ekstrak Rentang Halaman</div>
+                        <div class="mode-card-desc">Pilih halaman tertentu (cth: 1-3, 5) dan gabungkan menjadi 1 file PDF baru.</div>
+                    </div>
+                    <div class="mode-card" id="modeAllCard" onclick="setSplitMode('all')">
+                        <div class="mode-card-title">📦 Pisahkan Semua Halaman</div>
+                        <div class="mode-card-desc">Setiap halaman diubah jadi file PDF terpisah dan diunduh dalam file ZIP.</div>
+                    </div>
+                </div>
+
+                <!-- Range Input Panel -->
+                <div id="rangeInputPanel" class="output-section" style="margin-top: 10px;">
+                    <label for="rangeInput">🎯 Tentukan Halaman yang Diekstrak:</label>
+                    <div class="page-panel-row">
+                        <input type="text" id="rangeInput" class="page-input" placeholder="cth: 1-3, 5, 7" oninput="onRangeChange(this.value)" />
+                        <button class="btn btn-small btn-primary" onclick="selectAll()">Pilih Semua</button>
+                        <button class="btn btn-small btn-secondary-sm" onclick="clearSelection()">Reset</button>
+                    </div>
+                    <p id="rangeStatus" class="page-status" style="margin-top: 6px;">💡 Klik halaman di bawah untuk memilih secara visual</p>
+                </div>
+
+                <!-- Visual Page Grid Gallery -->
+                <div id="pageGrid" class="doc-page-grid"></div>
+
+                <!-- Output section -->
+                <div class="output-section" style="margin-top: 20px;">
+                    <label for="outputName">💾 Nama file output:</label>
+                    <div class="output-input-row">
+                        <input type="text" id="outputName" class="output-input" value="split_document" placeholder="nama_file" />
+                        <span class="output-ext" id="outputExt">.pdf</span>
+                    </div>
+                </div>
+
+                <div class="action-row">
+                    <button class="btn btn-success btn-full btn-large" id="splitBtn" onclick="processSplit()">
+                        ✂️ Pisahkan PDF Sekarang
+                    </button>
                 </div>
             </div>
 
-            <!-- Action Buttons -->
-            <div class="action-row">
-                <button class="btn btn-success btn-full btn-large" id="mergeBtn" onclick="mergePDFs()" disabled>
-                    🔗 Gabungkan PDF
-                </button>
-            </div>
-
-            <!-- Progress -->
+            <!-- Progress & Status -->
             <div id="progressSection" class="hidden">
                 <div class="progress-bar-track">
                     <div class="progress-bar-fill" id="progressBar" style="width: 0%"></div>
                 </div>
                 <p id="progressText" class="progress-text">Memproses...</p>
             </div>
-
-            <!-- Status -->
             <div id="statusBox" class="status-box hidden"></div>
 
-            <!-- Footer -->
             <div class="footer">
                 <p>🔒 100% Aman · 🆓 Gratis · ⚡ Cepat · Tidak perlu login</p>
             </div>
@@ -174,6 +191,6 @@
 
     <script src="gdrive-config.js?v=2"></script>
     <script src="gdrive-picker.js?v=2"></script>
-    <script src="app.js?v=2"></script>
+    <script src="split-pdf.js?v=2"></script>
 </body>
 </html>

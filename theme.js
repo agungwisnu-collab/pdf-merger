@@ -1,5 +1,5 @@
 /** ============================================================
- *  theme.js — Theme Controller (Dark/Light Mode) & Navbar Logic
+ *  theme.js — Theme Controller (Dark/Light Mode), Navbar Mega Menu & PWA
  * ============================================================ */
 
 (function () {
@@ -35,10 +35,27 @@
         });
     }
 
-    // 4. Inisialisasi icon saat DOM sudah siap
+    // 4. Tools Mega Menu Dropdown Toggle
+    window.toggleToolsDropdown = function (e) {
+        if (e) e.stopPropagation();
+        const dropdown = document.querySelector('.nav-dropdown');
+        if (dropdown) {
+            dropdown.classList.toggle('open');
+        }
+    };
+
+    // 5. Inisialisasi event saat DOM sudah siap
     document.addEventListener('DOMContentLoaded', () => {
         const theme = document.documentElement.getAttribute('data-theme') || 'light';
         updateThemeToggleIcons(theme);
+
+        // Tutup dropdown menu saat klik di luar
+        document.addEventListener('click', (e) => {
+            const dropdown = document.querySelector('.nav-dropdown');
+            if (dropdown && !dropdown.contains(e.target)) {
+                dropdown.classList.remove('open');
+            }
+        });
 
         // Pantau perubahan preferensi tema sistem jika user belum menyetel manual
         window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', (e) => {
@@ -48,5 +65,12 @@
                 updateThemeToggleIcons(newTheme);
             }
         });
+
+        // 6. Register PWA Service Worker if supported
+        if ('serviceWorker' in navigator && (window.location.protocol === 'https:' || window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')) {
+            navigator.serviceWorker.register('sw.js').catch((err) => {
+                console.log('SW registration note:', err.message);
+            });
+        }
     });
 })();

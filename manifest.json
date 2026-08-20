@@ -1,0 +1,21 @@
+{
+  "name": "PDF Flow PRO — All-in-One PDF Tools",
+  "short_name": "PDF Flow",
+  "description": "Aplikasi pengolah PDF lengkap 100% in-browser dan offline.",
+  "start_url": "index.html",
+  "display": "standalone",
+  "background_color": "#09090b",
+  "theme_color": "#4f46e5",
+  "icons": [
+    {
+      "src": "https://img.icons8.com/fluency/192/pdf-2.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "https://img.icons8.com/fluency/512/pdf-2.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
+}
