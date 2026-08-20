@@ -2036,47 +2036,77 @@ body {
 
 /* ==================== RESPONSIVE (MOBILE & TABLET) ==================== */
 @media (max-width: 768px) {
-    /* Navbar Mobile */
+    /* Navbar Mobile (Clean 1-Row Header) */
     .site-navbar {
         padding: 0;
     }
 
     .nav-container {
+        display: flex;
         flex-wrap: wrap;
-        padding: 8px 14px;
-        gap: 8px;
+        align-items: center;
+        justify-content: space-between;
+        padding: 8px 12px;
+        gap: 6px;
     }
 
     .nav-brand {
         order: 1;
-        font-size: 1.05rem;
-        gap: 8px;
+        font-size: 0.95rem;
+        gap: 6px;
+        flex-shrink: 0;
     }
 
     .brand-icon {
-        width: 32px;
-        height: 32px;
-        font-size: 1rem;
-        border-radius: 8px;
+        width: 28px;
+        height: 28px;
+        font-size: 0.9rem;
+        border-radius: 7px;
+    }
+
+    .brand-badge {
+        font-size: 0.55rem;
+        padding: 1px 4px;
     }
 
     .nav-actions {
         order: 2;
-        gap: 8px;
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        margin-left: auto;
+        flex-shrink: 0;
     }
 
     .security-badge {
         display: none;
     }
 
+    .nav-dropdown-btn {
+        padding: 5px 8px;
+        font-size: 0.75rem;
+        gap: 4px;
+        border-radius: 7px;
+        white-space: nowrap;
+    }
+
     .theme-toggle-btn {
-        padding: 6px 10px;
-        font-size: 0.78rem;
+        padding: 5px 8px;
+        font-size: 0.8rem;
+        border-radius: 7px;
+        white-space: nowrap;
+        min-width: 32px;
+        justify-content: center;
+    }
+
+    .theme-toggle-btn .theme-label {
+        display: none; /* Hide text label on mobile, showing only clean moon/sun icon */
     }
 
     .nav-tabs {
         order: 3;
         width: 100%;
+        margin-top: 4px;
         overflow-x: auto;
         flex-wrap: nowrap;
         -webkit-overflow-scrolling: touch;
