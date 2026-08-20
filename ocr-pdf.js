@@ -152,6 +152,54 @@ function downloadOcrTxt() {
     setTimeout(() => URL.revokeObjectURL(url), 10000);
 }
 
+async function saveOcrToGDrive() {
+    const text = document.getElementById('ocrOutput').value;
+    if (!text) {
+        alert('Tidak ada teks OCR untuk disimpan.');
+        return;
+    }
+
+    const gdriveBtn = document.getElementById('saveGDriveBtn');
+    if (gdriveBtn) {
+        gdriveBtn.disabled = true;
+        gdriveBtn.textContent = '⏳ Menyimpan...';
+    }
+
+    const blob = new Blob([text], { type: 'text/plain;charset=utf-8' });
+    const filename = (pdfFile?.name.replace(/\.pdf$/i, '') || 'ocr_result') + '_text.txt';
+
+    try {
+        await uploadBlobToGDrive({
+            blob: blob,
+            filename: filename,
+            mimeType: 'text/plain',
+            onProgress: (pct, msg) => {
+                showProgress(pct, msg);
+            },
+            onSuccess: (res) => {
+                hideProgress();
+                const folderInfo = res.folderName ? ` di folder <strong>"${res.folderName}"</strong>` : '';
+                showStatus(`✅ Teks OCR <strong>"${res.name}"</strong> berhasil disimpan ke Google Drive${folderInfo}! <a href="${res.webViewLink}" target="_blank" rel="noopener" style="color: var(--primary); text-decoration: underline; margin-left: 8px; font-weight: 700;">🔗 Buka di Drive</a>`, 'success');
+            },
+            onError: (err) => {
+                hideProgress();
+                showStatus('❌ Gagal menyimpan ke Google Drive: ' + err.message, 'error');
+            }
+        });
+    } catch (err) {
+        hideProgress();
+        showStatus('❌ Error: ' + err.message, 'error');
+    } finally {
+        if (gdriveBtn) {
+            gdriveBtn.disabled = false;
+            gdriveBtn.innerHTML = `
+                <svg width="14" height="14" viewBox="0 0 87.3 78" style="vertical-spacing: middle;"><path d="m6.6 66.85 3.85 6.65c.8 1.4 1.95 2.5 3.3 3.3l13.75-23.8H0c0 1.55.4 3.1 1.2 4.5z" fill="#0066da"/><path d="M43.65 25 29.9 1.2c-1.35.8-2.5 1.9-3.3 3.3l-25.4 44A9.06 9.06 0 0 0 0 53h27.5z" fill="#00ac47"/><path d="M73.55 76.8c1.35-.8 2.5-1.9 3.3-3.3l1.6-2.75 7.65-13.25c.8-1.4 1.2-2.95 1.2-4.5H59.8l5.85 10.15z" fill="#ea4335"/><path d="M43.65 25 57.4 1.2C56.05.4 54.5 0 52.9 0H34.4c-1.6 0-3.15.45-4.5 1.2z" fill="#00832d"/><path d="M59.8 53H87.3c0-1.55-.4-3.1-1.2-4.5l-25.4-44c-.8-1.4-1.95-2.5-3.3-3.3L43.65 25z" fill="#2684fc"/><path d="M73.4 76.8H27.5L13.75 53h59.65c1.6 0 3.15.45 4.5 1.25.7.4 1.3.9 1.8 1.5z" fill="#ffba00"/></svg>
+                <span>Simpan ke Drive</span>
+            `;
+        }
+    }
+}
+
 function showProgress(percent, text) {
     document.getElementById('progressSection').classList.remove('hidden');
     document.getElementById('progressBar').style.width = percent + '%';

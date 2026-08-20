@@ -253,7 +253,7 @@ body {
     position: absolute;
     top: calc(100% + 8px);
     right: 0;
-    width: 480px;
+    width: 540px;
     background: var(--bg-card);
     border: 1px solid var(--border-card);
     border-radius: 18px;
@@ -263,6 +263,8 @@ body {
     z-index: 1100;
     backdrop-filter: blur(16px);
     -webkit-backdrop-filter: blur(16px);
+    max-height: 85vh;
+    overflow-y: auto;
 }
 
 .nav-dropdown.open .nav-dropdown-menu {
@@ -2082,6 +2084,16 @@ body {
 
     .tools-hub-grid {
         grid-template-columns: 1fr;
+    }
+
+    .nav-dropdown-menu {
+        width: min(calc(100vw - 24px), 360px);
+        right: -10px;
+    }
+
+    .mega-menu-grid {
+        grid-template-columns: 1fr;
+        gap: 10px;
     }
 }
 
