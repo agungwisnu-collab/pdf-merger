@@ -14,8 +14,8 @@ const GDRIVE_DEFAULT_CONFIG = {
     // Contoh: "AIzaSyD-xxxxxxxxxxxxxxxxxxxxxxxxx"
     API_KEY: 'AIzaSyAt_tK4VHESkzwhIQxVt-Bu8p5KtN3PNyk',
 
-    // Project Number (Opsional / App ID)
-    APP_ID: 'pdf-merger-506023',
+    // Project Number (Nomor Project numerik dari Google Cloud)
+    APP_ID: '80487558987',
 
     // Scope untuk membaca file dari Google Drive
     SCOPES: 'https://www.googleapis.com/auth/drive.readonly',

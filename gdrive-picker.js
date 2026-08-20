@@ -128,9 +128,12 @@ function createPicker(token, config, options) {
         docsView.setMimeTypes(mimeTypes.join(','));
     }
 
+    // Project Number (appId) diambil dari APP_ID atau prefix Client ID
+    const appId = (/^\d+$/.test(config.APP_ID) ? config.APP_ID : config.CLIENT_ID?.split('-')[0]) || '';
+
     const builder = new google.picker.PickerBuilder()
         .enableFeature(google.picker.Feature.NAV_HIDDEN)
-        .setAppId(config.APP_ID || '')
+        .setAppId(appId)
         .setOAuthToken(token)
         .addView(docsView)
         .addView(new google.picker.DocsUploadView())
