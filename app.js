@@ -1,6 +1,11 @@
 /** ============================================================
  *  PDF Merger — app.js
  *  Libraries: pdf-lib (merge), PDF.js (thumbnail + page count)
+ *  Features:
+ *  - Drag & Drop multi-file PDF merge
+ *  - Page range selection per file
+ *  - Password-protected PDF detection & inline unlock
+ *  - Local download & Direct Google Drive sync
  * ============================================================ */
 
 // ─── PDF.js Worker Setup ───────────────────────────────────────
@@ -9,12 +14,16 @@ pdfjsLib.GlobalWorkerOptions.workerSrc =
 
 /**
  * pdfItems: array of {
- *   file        : File,
- *   totalPages  : number,
- *   selectedPages: Set<number>,   // 1-based
- *   thumbnail   : string | null,  // data URL canvas
- *   pageInput   : string,         // raw text input for page range
- *   expanded    : boolean,        // page selector panel open?
+ *   file                 : File,
+ *   totalPages           : number,
+ *   selectedPages        : Set<number>,   // 1-based
+ *   thumbnail            : string | null,  // data URL canvas
+ *   pageInput            : string,         // raw text input for page range
+ *   expanded             : boolean,        // page selector panel open?
+ *   isEncrypted          : boolean,        // password protected?
+ *   isUnlocked           : boolean,        // successfully unlocked?
+ *   password             : string,         // user entered password
+ *   decryptedArrayBuffer : ArrayBuffer | null // unlocked PDF bytes for merging
  * }
  */
 let pdfItems     = [];
@@ -65,7 +74,7 @@ function pickFromGDrive() {
     });
 }
 
-// ─── Load PDF Item (async: thumbnail + page count) ─────────────
+// ─── Load PDF Item (async: thumbnail + page count + encryption check) ─────────
 async function loadPdfItem(file) {
     const item = {
         file,
@@ -74,41 +83,120 @@ async function loadPdfItem(file) {
         thumbnail: null,
         pageInput: '',
         expanded: false,
+        isEncrypted: false,
+        isUnlocked: true,
+        password: '',
+        decryptedArrayBuffer: null
     };
 
-    const index = pdfItems.length;
     pdfItems.push(item);
-    renderFileList(); // render placeholder dulu
+    renderFileList();
 
     try {
         const arrayBuffer = await file.arrayBuffer();
         const pdfDoc = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
 
         item.totalPages = pdfDoc.numPages;
-        // default: semua halaman dipilih
         item.selectedPages = new Set(Array.from({ length: pdfDoc.numPages }, (_, i) => i + 1));
         item.pageInput = pdfDoc.numPages > 1 ? `1-${pdfDoc.numPages}` : '1';
+        item.isEncrypted = false;
+        item.isUnlocked = true;
 
-        // render thumbnail halaman pertama dengan resolusi tajam
-        const page    = await pdfDoc.getPage(1);
-        const scale   = 0.5;
+        // render thumbnail halaman pertama
+        const page     = await pdfDoc.getPage(1);
+        const scale    = 0.5;
         const viewport = page.getViewport({ scale });
-        const canvas  = document.createElement('canvas');
-        canvas.width  = viewport.width;
-        canvas.height = viewport.height;
+        const canvas   = document.createElement('canvas');
+        canvas.width   = viewport.width;
+        canvas.height  = viewport.height;
         await page.render({ canvasContext: canvas.getContext('2d'), viewport }).promise;
         item.thumbnail = canvas.toDataURL('image/jpeg', 0.85);
 
-    } catch {
-        item.totalPages = 0;
-        item.thumbnail = null;
+    } catch (err) {
+        if (err.name === 'PasswordException' || err.message?.toLowerCase().includes('password') || err.code === 1) {
+            item.isEncrypted = true;
+            item.isUnlocked = false;
+            item.totalPages = 0;
+            item.thumbnail = null;
+        } else {
+            item.totalPages = 0;
+            item.thumbnail = null;
+        }
     }
 
     renderFileList();
 }
 
+// ─── Unlock Encrypted PDF Item ──────────────────────────────────
+async function unlockPdfItem(index) {
+    const item = pdfItems[index];
+    const passInput = document.getElementById(`unlockPass_${index}`);
+    const password = passInput ? passInput.value.trim() : item.password;
+
+    if (!password) {
+        alert('Harap masukkan kata sandi (password) untuk dokumen ini.');
+        return;
+    }
+
+    showProgress(25, `Membuka password: ${item.file.name}...`);
+
+    try {
+        const arrayBuffer = await item.file.arrayBuffer();
+        const pdfDocJs = await pdfjsLib.getDocument({ data: arrayBuffer, password }).promise;
+
+        item.totalPages = pdfDocJs.numPages;
+        item.selectedPages = new Set(Array.from({ length: pdfDocJs.numPages }, (_, i) => i + 1));
+        item.pageInput = pdfDocJs.numPages > 1 ? `1-${pdfDocJs.numPages}` : '1';
+        item.password = password;
+
+        // Render thumbnail
+        const page     = await pdfDocJs.getPage(1);
+        const scale    = 0.5;
+        const viewport = page.getViewport({ scale });
+        const canvas   = document.createElement('canvas');
+        canvas.width   = viewport.width;
+        canvas.height  = viewport.height;
+        await page.render({ canvasContext: canvas.getContext('2d'), viewport }).promise;
+        item.thumbnail = canvas.toDataURL('image/jpeg', 0.85);
+
+        // Convert encrypted PDF to clean unlocked PDF arrayBuffer for pdf-lib merging
+        showProgress(55, `Menyiapkan halaman ${item.file.name} untuk digabungkan...`);
+        const { PDFDocument } = PDFLib;
+        const unlockedDoc = await PDFDocument.create();
+
+        for (let p = 1; p <= item.totalPages; p++) {
+            const pPage = await pdfDocJs.getPage(p);
+            const pVp = pPage.getViewport({ scale: 2.0 });
+            const pCanvas = document.createElement('canvas');
+            pCanvas.width  = pVp.width;
+            pCanvas.height = pVp.height;
+            await pPage.render({ canvasContext: pCanvas.getContext('2d'), viewport: pVp }).promise;
+
+            const imgBytes = await new Promise(res => {
+                pCanvas.toBlob(async blob => {
+                    res(new Uint8Array(await blob.arrayBuffer()));
+                }, 'image/jpeg', 0.94);
+            });
+
+            const embedded = await unlockedDoc.embedJpg(imgBytes);
+            const origVp = pPage.getViewport({ scale: 1.0 });
+            const newPage = unlockedDoc.addPage([origVp.width, origVp.height]);
+            newPage.drawImage(embedded, { x: 0, y: 0, width: origVp.width, height: origVp.height });
+        }
+
+        item.decryptedArrayBuffer = await unlockedDoc.save();
+        item.isUnlocked = true;
+
+        hideProgress();
+        renderFileList();
+        showStatus(`✅ Dokumen "${item.file.name}" berhasil dibuka dan siap digabungkan!`, 'success');
+    } catch (err) {
+        hideProgress();
+        alert('Gagal membuka password: ' + (err.name === 'PasswordException' ? 'Kata sandi salah atau tidak cocok.' : err.message));
+    }
+}
+
 // ─── Parse Page Range String ───────────────────────────────────
-// Input: "1-3, 5, 7-9"  →  Set { 1, 2, 3, 5, 7, 8, 9 }
 function parsePageRange(input, total) {
     const result = new Set();
     if (!input.trim()) return result;
@@ -153,7 +241,10 @@ function renderFileList() {
     fileSection.classList.remove('hidden');
     outputSection.classList.remove('hidden');
     fileCount.textContent = pdfItems.length;
-    const isReady = pdfItems.length >= 2;
+    
+    // Check if at least 2 files are present and all encrypted files are unlocked
+    const hasLocked = pdfItems.some(item => item.isEncrypted && !item.isUnlocked);
+    const isReady = pdfItems.length >= 2 && !hasLocked;
     mergeBtn.disabled = !isReady;
     const gdriveBtn = document.getElementById('mergeGDriveBtn');
     if (gdriveBtn) gdriveBtn.disabled = !isReady;
@@ -161,15 +252,35 @@ function renderFileList() {
     list.innerHTML = pdfItems.map((item, index) => {
         const thumb = item.thumbnail
             ? `<img src="${item.thumbnail}" class="pdf-thumb" alt="preview">`
-            : `<div class="pdf-thumb pdf-thumb-placeholder">${item.totalPages === 0 ? '⏳' : '📄'}</div>`;
+            : `<div class="pdf-thumb pdf-thumb-placeholder">${item.isEncrypted && !item.isUnlocked ? '🔒' : (item.totalPages === 0 ? '⏳' : '📄')}</div>`;
 
-        const pageLabel = item.totalPages > 0
-            ? `${item.selectedPages.size}/${item.totalPages} hal.`
-            : 'Memuat...';
+        let pageBadgeHtml = '';
+        if (item.isEncrypted && !item.isUnlocked) {
+            pageBadgeHtml = `<span class="encrypted-badge">🔒 Terkunci Password</span>`;
+        } else if (item.isEncrypted && item.isUnlocked) {
+            pageBadgeHtml = `<span class="encrypted-badge unlocked">🔓 Terbuka (${item.selectedPages.size}/${item.totalPages} hal.)</span>`;
+        } else {
+            const pageLabel = item.totalPages > 0
+                ? `${item.selectedPages.size}/${item.totalPages} hal.`
+                : 'Memuat...';
+            const pageBadgeClass = (item.totalPages > 0 && item.selectedPages.size < item.totalPages)
+                ? 'page-badge page-badge-partial'
+                : 'page-badge';
+            pageBadgeHtml = `<span class="${pageBadgeClass}">${pageLabel}</span>`;
+        }
 
-        const pageBadgeClass = (item.totalPages > 0 && item.selectedPages.size < item.totalPages)
-            ? 'page-badge page-badge-partial'
-            : 'page-badge';
+        const unlockRowHtml = (item.isEncrypted && !item.isUnlocked) ? `
+            <div class="inline-unlock-row">
+                <input
+                    type="password"
+                    class="inline-unlock-input"
+                    id="unlockPass_${index}"
+                    placeholder="Ketik password..."
+                    onkeydown="if(event.key==='Enter') unlockPdfItem(${index})"
+                />
+                <button class="btn btn-small btn-primary" onclick="unlockPdfItem(${index})">🔓 Buka</button>
+            </div>
+        ` : '';
 
         return `
         <li
@@ -186,14 +297,15 @@ function renderFileList() {
                 <div class="file-name" title="${escapeHtml(item.file.name)}">${escapeHtml(item.file.name)}</div>
                 <div class="file-meta">
                     <span class="file-size">${formatSize(item.file.size)}</span>
-                    <span class="${pageBadgeClass}">${pageLabel}</span>
+                    ${pageBadgeHtml}
                 </div>
+                ${unlockRowHtml}
             </div>
             <button
                 class="page-btn ${item.expanded ? 'page-btn-active' : ''}"
                 onclick="togglePageSelector(${index})"
                 title="Pilih Halaman"
-                ${item.totalPages === 0 ? 'disabled' : ''}
+                ${(item.totalPages === 0 || (item.isEncrypted && !item.isUnlocked)) ? 'disabled' : ''}
             >🗂️ Halaman</button>
             <button class="remove-btn" onclick="removeFile(${index})" title="Hapus">✕</button>
         </li>
@@ -254,7 +366,6 @@ function onPageInputChange(index, value) {
     item.pageInput = value;
     item.selectedPages = parsePageRange(value, item.totalPages);
 
-    // update status label without full re-render
     const statusEl = document.getElementById(`pageStatus_${index}`);
     if (statusEl) {
         if (item.selectedPages.size === 0) {
@@ -266,7 +377,6 @@ function onPageInputChange(index, value) {
         }
     }
 
-    // update badge
     renderFileList();
 }
 
@@ -284,71 +394,66 @@ function clearPageSelection(index) {
     renderFileList();
 }
 
-// ─── Drag-to-Reorder ──────────────────────────────────────────
-function onDragStart(e, index) {
-    dragSrcIndex = index;
-    setTimeout(() => {
-        const items = document.querySelectorAll('#fileList li[data-index]');
-        items.forEach(li => {
-            if (parseInt(li.dataset.index) === index) li.classList.add('dragging');
-        });
-    }, 0);
-}
-
-function onDragOver(e) {
-    e.preventDefault();
-    document.querySelectorAll('#fileList li[data-index]').forEach(li => li.classList.remove('drag-over'));
-    const li = e.currentTarget;
-    if (li.dataset.index !== undefined) li.classList.add('drag-over');
-}
-
-function onDropItem(e, targetIndex) {
-    e.preventDefault();
-    if (dragSrcIndex === null || dragSrcIndex === targetIndex) return;
-    const moved = pdfItems.splice(dragSrcIndex, 1)[0];
-    pdfItems.splice(targetIndex, 0, moved);
-    dragSrcIndex = null;
-    renderFileList();
-}
-
-function onDragEnd() {
-    document.querySelectorAll('#fileList li').forEach(li => {
-        li.classList.remove('dragging', 'drag-over');
-    });
-    dragSrcIndex = null;
-}
-
-// ─── Remove / Clear ────────────────────────────────────────────
+// ─── Remove File ───────────────────────────────────────────────
 function removeFile(index) {
     pdfItems.splice(index, 1);
     renderFileList();
 }
 
-function clearAll() {
-    pdfItems = [];
-    renderFileList();
-    hideStatus();
-    hideProgress();
+// ─── Drag & Drop Reorder ───────────────────────────────────────
+function onDragStart(e, index) {
+    dragSrcIndex = index;
+    e.dataTransfer.effectAllowed = 'move';
+    e.currentTarget.classList.add('dragging');
 }
 
-// ─── Merge PDFs ────────────────────────────────────────────────
-async function mergePDFs() {
+function onDragOver(e) {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = 'move';
+    const li = e.currentTarget.closest('li[draggable="true"]');
+    if (li) li.classList.add('drag-over');
+}
+
+function onDropItem(e, targetIndex) {
+    e.stopPropagation();
+    document.querySelectorAll('.drag-over').forEach(el => el.classList.remove('drag-over'));
+    if (dragSrcIndex === null || dragSrcIndex === targetIndex) return;
+
+    const [moved] = pdfItems.splice(dragSrcIndex, 1);
+    pdfItems.splice(targetIndex, 0, moved);
+    renderFileList();
+}
+
+function onDragEnd() {
+    dragSrcIndex = null;
+    document.querySelectorAll('.dragging, .drag-over').forEach(el => {
+        el.classList.remove('dragging', 'drag-over');
+    });
+}
+
+// ─── Merge & Download PDF ──────────────────────────────────────
+async function mergePdfs() {
     if (pdfItems.length < 2) return;
 
-    // Ambil nama output dari input
+    // Verify all files unlocked
+    const lockedItem = pdfItems.find(item => item.isEncrypted && !item.isUnlocked);
+    if (lockedItem) {
+        alert(`Dokumen "${lockedItem.file.name}" terkunci dengan password. Harap buka kuncinya terlebih dahulu.`);
+        return;
+    }
+
     const rawName    = document.getElementById('outputName').value.trim();
     const outputName = (rawName || 'merged_output').replace(/\.pdf$/i, '') + '.pdf';
 
     const mergeBtn = document.getElementById('mergeBtn');
     mergeBtn.disabled = true;
-    showProgress(0, 'Memulai proses...');
+    showProgress(0, 'Memulai proses penggabungan...');
     hideStatus();
 
     try {
         const { PDFDocument } = PDFLib;
         const mergedPdf = await PDFDocument.create();
 
-        // filter hanya item yang punya halaman terpilih
         const activeItems = pdfItems.filter(item => item.selectedPages.size > 0);
         if (activeItems.length === 0) throw new Error('Tidak ada halaman yang dipilih untuk digabung.');
         if (activeItems.length < 2) throw new Error('Minimal 2 file harus memiliki halaman yang dipilih.');
@@ -361,15 +466,14 @@ async function mergePDFs() {
             const pct  = Math.round((i / total) * 90);
             showProgress(pct, `Memproses: ${item.file.name} (${i + 1}/${total})`);
 
-            const arrayBuffer = await item.file.arrayBuffer();
+            const arrayBuffer = item.decryptedArrayBuffer || await item.file.arrayBuffer();
             let pdf;
             try {
                 pdf = await PDFDocument.load(arrayBuffer);
             } catch {
-                throw new Error(`File "${item.file.name}" rusak atau terproteksi password.`);
+                throw new Error(`File "${item.file.name}" rusak atau gagal dimuat.`);
             }
 
-            // konversi Set 1-based ke array 0-based index untuk pdf-lib
             const pageIndices = getSortedPages(item.selectedPages).map(p => p - 1);
             const pages = await mergedPdf.copyPages(pdf, pageIndices);
             pages.forEach(page => mergedPdf.addPage(page));
@@ -400,7 +504,7 @@ async function mergePDFs() {
         hideProgress();
         showStatus('❌ Error: ' + error.message, 'error');
     } finally {
-        const isReady = pdfItems.length >= 2;
+        const isReady = pdfItems.length >= 2 && !pdfItems.some(item => item.isEncrypted && !item.isUnlocked);
         mergeBtn.disabled = !isReady;
         const gdriveBtn = document.getElementById('mergeGDriveBtn');
         if (gdriveBtn) gdriveBtn.disabled = !isReady;
@@ -410,6 +514,12 @@ async function mergePDFs() {
 // ─── Merge & Save Directly to Google Drive ─────────────────────
 async function mergeAndSaveToGDrive() {
     if (pdfItems.length < 2) return;
+
+    const lockedItem = pdfItems.find(item => item.isEncrypted && !item.isUnlocked);
+    if (lockedItem) {
+        alert(`Dokumen "${lockedItem.file.name}" terkunci dengan password. Harap buka kuncinya terlebih dahulu.`);
+        return;
+    }
 
     const rawName    = document.getElementById('outputName').value.trim();
     const outputName = (rawName || 'merged_output').replace(/\.pdf$/i, '') + '.pdf';
@@ -437,7 +547,7 @@ async function mergeAndSaveToGDrive() {
             const pct  = Math.round((i / total) * 70);
             showProgress(pct, `Menggabungkan: ${item.file.name} (${i + 1}/${total})`);
 
-            const arrayBuffer = await item.file.arrayBuffer();
+            const arrayBuffer = item.decryptedArrayBuffer || await item.file.arrayBuffer();
             const pdf = await PDFDocument.load(arrayBuffer);
 
             const pageIndices = getSortedPages(item.selectedPages).map(p => p - 1);
@@ -471,7 +581,7 @@ async function mergeAndSaveToGDrive() {
         hideProgress();
         showStatus('❌ Error: ' + error.message, 'error');
     } finally {
-        const isReady = pdfItems.length >= 2;
+        const isReady = pdfItems.length >= 2 && !pdfItems.some(item => item.isEncrypted && !item.isUnlocked);
         mergeBtn.disabled = !isReady;
         if (gdriveBtn) gdriveBtn.disabled = !isReady;
     }
@@ -513,4 +623,3 @@ function escapeHtml(str) {
         .replace(/>/g, '&gt;')
         .replace(/"/g, '&quot;');
 }
-

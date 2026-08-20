@@ -76,15 +76,43 @@ function clearFile() {
 // ─── Generate PDF Blob via html2pdf ────────────────────────────
 async function generateWordPdfBlob() {
     const previewBox = document.getElementById('docPreviewContainer');
+    
+    // Create an unconstrained clone with clean print styles
+    const clone = previewBox.cloneNode(true);
+    clone.style.position = 'absolute';
+    clone.style.left = '-9999px';
+    clone.style.top = '0';
+    clone.style.width = '794px'; // Standard A4 width at 96 DPI
+    clone.style.maxWidth = '794px';
+    clone.style.padding = '40px';
+    clone.style.background = '#ffffff';
+    clone.style.color = '#0f172a';
+    clone.style.fontSize = '14px';
+    clone.style.lineHeight = '1.6';
+    clone.style.fontFamily = "'Times New Roman', Georgia, serif";
+    clone.style.overflow = 'visible';
+    clone.style.height = 'auto';
+    clone.style.maxHeight = 'none';
+    document.body.appendChild(clone);
+
     const opt = {
         margin: [15, 15, 15, 15],
         filename: 'document.pdf',
         image: { type: 'jpeg', quality: 0.98 },
-        html2canvas: { scale: 2, useCORS: true },
+        html2canvas: { scale: 2, useCORS: true, backgroundColor: '#ffffff' },
         jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' },
+        pagebreak: { mode: ['avoid-all', 'css', 'legacy'] }
     };
 
-    return await html2pdf().set(opt).from(previewBox).outputPdf('blob');
+    try {
+        const worker = html2pdf().set(opt).from(clone);
+        const pdfBlob = await worker.output('blob');
+        document.body.removeChild(clone);
+        return pdfBlob;
+    } catch (e) {
+        if (clone.parentNode) clone.parentNode.removeChild(clone);
+        throw e;
+    }
 }
 
 // ─── Convert & Download PDF ────────────────────────────────────

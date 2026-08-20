@@ -99,28 +99,37 @@ async function protectAndDownload() {
         const arrayBuf = await pdfFile.arrayBuffer();
         const pdfDoc = await PDFDocument.load(arrayBuf);
 
-        showProgress(60, 'Mengunci dokumen dengan algoritma keamanan...');
+        showProgress(50, 'Mengunci dokumen dengan algoritma keamanan AES-256...');
 
-        // Encrypt with pdf-lib
-        if (typeof pdfDoc.encrypt === 'function') {
-            pdfDoc.encrypt({
-                userPassword: pass,
-                ownerPassword: pass,
-                permissions: {
-                    printing: 'highResolution',
-                    modifying: false,
-                    copying: false,
-                    annotating: false,
-                    fillingForms: false,
-                    contentAccessibility: true,
-                    documentAssembly: false,
-                },
-            });
+        const rawBytes = await pdfDoc.save();
+        let encryptedBytes;
+
+        if (typeof PDFEncrypt !== 'undefined' && typeof PDFEncrypt.encryptPDF === 'function') {
+            try {
+                encryptedBytes = await PDFEncrypt.encryptPDF(rawBytes, pass, {
+                    ownerPassword: pass,
+                    userPassword: pass,
+                    algorithm: 'AES-256',
+                    allowPrinting: true,
+                    allowModifying: false,
+                    allowCopying: false,
+                    allowAnnotating: false,
+                    allowFillingForms: false,
+                });
+            } catch (aesErr) {
+                console.warn('AES-256 fallback to RC4:', aesErr);
+                encryptedBytes = await PDFEncrypt.encryptPDF(rawBytes, pass, {
+                    ownerPassword: pass,
+                    userPassword: pass,
+                    algorithm: 'RC4',
+                });
+            }
+        } else {
+            throw new Error('Modul enkripsi PDFEncrypt tidak tersedia.');
         }
 
         showProgress(90, 'Menyimpan file PDF terenkripsi...');
-        const pdfBytes = await pdfDoc.save();
-        const blob = new Blob([pdfBytes], { type: 'application/pdf' });
+        const blob = new Blob([encryptedBytes], { type: 'application/pdf' });
         const url = URL.createObjectURL(blob);
 
         const a = document.createElement('a');
@@ -171,27 +180,37 @@ async function protectAndSaveToGDrive() {
         const arrayBuf = await pdfFile.arrayBuffer();
         const pdfDoc = await PDFDocument.load(arrayBuf);
 
-        showProgress(50, 'Mengunci dokumen dengan algoritma keamanan...');
+        showProgress(50, 'Mengunci dokumen dengan algoritma keamanan AES-256...');
 
-        if (typeof pdfDoc.encrypt === 'function') {
-            pdfDoc.encrypt({
-                userPassword: pass,
-                ownerPassword: pass,
-                permissions: {
-                    printing: 'highResolution',
-                    modifying: false,
-                    copying: false,
-                    annotating: false,
-                    fillingForms: false,
-                    contentAccessibility: true,
-                    documentAssembly: false,
-                },
-            });
+        const rawBytes = await pdfDoc.save();
+        let encryptedBytes;
+
+        if (typeof PDFEncrypt !== 'undefined' && typeof PDFEncrypt.encryptPDF === 'function') {
+            try {
+                encryptedBytes = await PDFEncrypt.encryptPDF(rawBytes, pass, {
+                    ownerPassword: pass,
+                    userPassword: pass,
+                    algorithm: 'AES-256',
+                    allowPrinting: true,
+                    allowModifying: false,
+                    allowCopying: false,
+                    allowAnnotating: false,
+                    allowFillingForms: false,
+                });
+            } catch (aesErr) {
+                console.warn('AES-256 fallback to RC4:', aesErr);
+                encryptedBytes = await PDFEncrypt.encryptPDF(rawBytes, pass, {
+                    ownerPassword: pass,
+                    userPassword: pass,
+                    algorithm: 'RC4',
+                });
+            }
+        } else {
+            throw new Error('Modul enkripsi PDFEncrypt tidak tersedia.');
         }
 
         showProgress(80, 'Menyimpan file PDF...');
-        const pdfBytes = await pdfDoc.save();
-        const blob = new Blob([pdfBytes], { type: 'application/pdf' });
+        const blob = new Blob([encryptedBytes], { type: 'application/pdf' });
 
         uploadBlobToGDrive({
             blob,

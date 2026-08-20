@@ -1,5 +1,11 @@
 /** ============================================================
  *  crop-pdf.js — PDF Page Margin Cropper Controller
+ *  Features:
+ *  - Freeform custom cropping with 8 drag & resize handles
+ *  - Click & drag on canvas to draw a brand new crop box
+ *  - Aspect ratio presets (Freeform, 1:1, 4:3, 16:9, A4, Letter)
+ *  - Apply crop to All Pages or Current Page
+ *  - In-browser PDF clipping via pdf-lib
  * ============================================================ */
 
 let pdfFile     = null;
@@ -7,6 +13,7 @@ let pdfDocJs    = null;
 let currentPage = 1;
 let totalPages  = 1;
 let cropBox     = { x: 30, y: 30, w: 240, h: 340 }; // In canvas relative pixels
+let currentRatio = 'free'; // 'free' | '1:1' | '4:3' | '16:9' | 'a4_v' | 'a4_h' | 'letter'
 
 if (typeof pdfjsLib !== 'undefined') {
     pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
@@ -28,7 +35,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (e.target.files.length > 0) handleFileSelect(e.target.files[0]);
     });
 
-    initCropDrag();
+    initCropInteractions();
 });
 
 function pickPDFFromGDrive() {
@@ -95,6 +102,7 @@ async function renderCurrentPage() {
     const ctx = canvas.getContext('2d');
 
     await page.render({ canvasContext: ctx, viewport }).promise;
+    updateOverlayStyle();
 }
 
 function prevPage() {
@@ -113,8 +121,7 @@ function nextPage() {
 
 function resetCropBox() {
     const canvas = document.getElementById('cropCanvas');
-    const overlay = document.getElementById('cropBoxOverlay');
-    if (!canvas || !overlay) return;
+    if (!canvas || canvas.width === 0) return;
 
     const pad = 24;
     cropBox = {
@@ -124,12 +131,59 @@ function resetCropBox() {
         h: Math.max(80, canvas.height - pad * 2),
     };
 
+    applyCurrentRatio();
     updateOverlayStyle();
+}
+
+function maximizeCropBox() {
+    const canvas = document.getElementById('cropCanvas');
+    if (!canvas || canvas.width === 0) return;
+
+    cropBox = {
+        x: 0,
+        y: 0,
+        w: canvas.width,
+        h: canvas.height,
+    };
+    updateOverlayStyle();
+}
+
+function onRatioChange(ratio) {
+    currentRatio = ratio;
+    applyCurrentRatio();
+    updateOverlayStyle();
+}
+
+function getRatioValue() {
+    if (currentRatio === '1:1') return 1;
+    if (currentRatio === '4:3') return 4 / 3;
+    if (currentRatio === '16:9') return 16 / 9;
+    if (currentRatio === 'a4_v') return 1 / 1.414;
+    if (currentRatio === 'a4_h') return 1.414;
+    if (currentRatio === 'letter') return 8.5 / 11;
+    return null;
+}
+
+function applyCurrentRatio() {
+    const r = getRatioValue();
+    if (!r) return;
+
+    const canvas = document.getElementById('cropCanvas');
+    if (!canvas) return;
+
+    let newH = cropBox.w / r;
+    if (newH > canvas.height - cropBox.y) {
+        newH = canvas.height - cropBox.y;
+        cropBox.w = newH * r;
+    }
+    cropBox.h = newH;
 }
 
 function updateOverlayStyle() {
     const canvas = document.getElementById('cropCanvas');
     const overlay = document.getElementById('cropBoxOverlay');
+    if (!canvas || !overlay) return;
+
     const canvasOffsetLeft = canvas.offsetLeft;
     const canvasOffsetTop = canvas.offsetTop;
 
@@ -139,33 +193,133 @@ function updateOverlayStyle() {
     overlay.style.height = cropBox.h + 'px';
 }
 
-function initCropDrag() {
+// ─── Freeform Crop Drag, Resize & Draw Handlers ─────────────────
+function initCropInteractions() {
     const overlay = document.getElementById('cropBoxOverlay');
-    let isDragging = false;
+    const canvas  = document.getElementById('cropCanvas');
+    let mode = null; // 'move' | 'resize' | 'draw'
+    let resizeDir = null;
     let startX = 0, startY = 0;
-    let origBoxX = 0, origBoxY = 0;
+    let origBox = { x: 0, y: 0, w: 0, h: 0 };
 
+    // 1. Move Crop Box
     overlay.addEventListener('mousedown', (e) => {
-        isDragging = true;
+        if (e.target.classList.contains('crop-handle')) return;
+        mode = 'move';
         startX = e.clientX;
         startY = e.clientY;
-        origBoxX = cropBox.x;
-        origBoxY = cropBox.y;
+        origBox = { ...cropBox };
+        e.preventDefault();
+    });
+
+    // 2. Resize via 8 Handles
+    overlay.querySelectorAll('.crop-handle').forEach(h => {
+        h.addEventListener('mousedown', (e) => {
+            e.stopPropagation();
+            e.preventDefault();
+            mode = 'resize';
+            resizeDir = h.dataset.dir;
+            startX = e.clientX;
+            startY = e.clientY;
+            origBox = { ...cropBox };
+        });
+    });
+
+    // 3. Draw New Crop Box by Dragging on Canvas
+    canvas.addEventListener('mousedown', (e) => {
+        const rect = canvas.getBoundingClientRect();
+        const clickX = e.clientX - rect.left;
+        const clickY = e.clientY - rect.top;
+
+        mode = 'draw';
+        startX = e.clientX;
+        startY = e.clientY;
+        origBox = { x: clickX, y: clickY, w: 0, h: 0 };
+        cropBox = { x: clickX, y: clickY, w: 10, h: 10 };
+        updateOverlayStyle();
         e.preventDefault();
     });
 
     document.addEventListener('mousemove', (e) => {
-        if (!isDragging) return;
-        const canvas = document.getElementById('cropCanvas');
+        if (!mode) return;
+        const canvasRect = canvas.getBoundingClientRect();
+        const maxW = canvas.width;
+        const maxH = canvas.height;
         const dx = e.clientX - startX;
         const dy = e.clientY - startY;
+        const ratio = getRatioValue();
 
-        cropBox.x = Math.max(0, Math.min(canvas.width - cropBox.w, origBoxX + dx));
-        cropBox.y = Math.max(0, Math.min(canvas.height - cropBox.h, origBoxY + dy));
+        if (mode === 'move') {
+            cropBox.x = Math.max(0, Math.min(maxW - origBox.w, origBox.x + dx));
+            cropBox.y = Math.max(0, Math.min(maxH - origBox.h, origBox.y + dy));
+        } else if (mode === 'draw') {
+            const currentX = Math.max(0, Math.min(maxW, e.clientX - canvasRect.left));
+            const currentY = Math.max(0, Math.min(maxH, e.clientY - canvasRect.top));
+
+            let left = Math.min(origBox.x, currentX);
+            let top  = Math.min(origBox.y, currentY);
+            let w    = Math.abs(currentX - origBox.x);
+            let h    = Math.abs(currentY - origBox.y);
+
+            if (ratio) {
+                h = w / ratio;
+            }
+
+            cropBox.x = left;
+            cropBox.y = top;
+            cropBox.w = Math.max(20, Math.min(maxW - left, w));
+            cropBox.h = Math.max(20, Math.min(maxH - top, h));
+        } else if (mode === 'resize') {
+            let newX = origBox.x;
+            let newY = origBox.y;
+            let newW = origBox.w;
+            let newH = origBox.h;
+
+            if (resizeDir.includes('e')) {
+                newW = Math.max(20, Math.min(maxW - origBox.x, origBox.w + dx));
+            }
+            if (resizeDir.includes('s')) {
+                newH = Math.max(20, Math.min(maxH - origBox.y, origBox.h + dy));
+            }
+            if (resizeDir.includes('w')) {
+                const proposedW = origBox.w - dx;
+                if (proposedW >= 20 && origBox.x + dx >= 0) {
+                    newW = proposedW;
+                    newX = origBox.x + dx;
+                }
+            }
+            if (resizeDir.includes('n')) {
+                const proposedH = origBox.h - dy;
+                if (proposedH >= 20 && origBox.y + dy >= 0) {
+                    newH = proposedH;
+                    newY = origBox.y + dy;
+                }
+            }
+
+            if (ratio) {
+                if (resizeDir === 'e' || resizeDir === 'w') {
+                    newH = newW / ratio;
+                } else {
+                    newW = newH * ratio;
+                }
+            }
+
+            cropBox.x = newX;
+            cropBox.y = newY;
+            cropBox.w = newW;
+            cropBox.h = newH;
+        }
+
         updateOverlayStyle();
     });
 
-    document.addEventListener('mouseup', () => { isDragging = false; });
+    document.addEventListener('mouseup', () => {
+        if (mode === 'draw' && (cropBox.w < 30 || cropBox.h < 30)) {
+            resetCropBox();
+        }
+        mode = null;
+        resizeDir = null;
+    });
 }
 
 // ─── Crop & Download PDF ───────────────────────────────────────
@@ -266,7 +420,7 @@ async function cropAndSaveToGDrive() {
             page.setCropBox(cropX, Math.max(0, cropY), cropW, cropH);
         }
 
-        showProgress(80, 'Menyimpan dokumen PDF...');
+        showProgress(70, 'Mengunggah ke Google Drive...');
         const pdfBytes = await pdfDoc.save();
         const blob = new Blob([pdfBytes], { type: 'application/pdf' });
 
@@ -279,7 +433,7 @@ async function cropAndSaveToGDrive() {
                 showProgress(100, 'Selesai!');
                 const loc = res.folderName ? `di folder <strong>"${res.folderName}"</strong>` : 'di Google Drive Anda';
                 showStatus(
-                    `✅ Dokumen hasil crop <strong>"${res.name}"</strong> berhasil disimpan ${loc}! <a href="${res.webViewLink}" target="_blank" rel="noopener" style="color: var(--primary); text-decoration: underline; margin-left: 8px; font-weight: 700;">🔗 Buka di Google Drive</a>`,
+                    `✅ Dokumen <strong>"${res.name}"</strong> berhasil disimpan ${loc}! <a href="${res.webViewLink}" target="_blank" rel="noopener" style="color: var(--primary); text-decoration: underline; margin-left: 8px; font-weight: 700;">🔗 Buka di Google Drive</a>`,
                     'success'
                 );
             },
@@ -296,6 +450,7 @@ async function cropAndSaveToGDrive() {
     }
 }
 
+// ─── Helpers ────────────────────────────────────────────────────
 function showProgress(percent, text) {
     document.getElementById('progressSection').classList.remove('hidden');
     document.getElementById('progressBar').style.width = percent + '%';

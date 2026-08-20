@@ -2,7 +2,7 @@
  *  sw.js — Service Worker for Offline PWA Support
  * ============================================================ */
 
-const CACHE_NAME = 'pdf-flow-v7';
+const CACHE_NAME = 'pdf-flow-v9';
 const ASSETS_TO_CACHE = [
     './',
     './index.html',

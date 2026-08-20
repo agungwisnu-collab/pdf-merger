@@ -114,18 +114,42 @@ function renderSheetTable(sheetName) {
 
 // ─── Generate PDF Blob via html2pdf ────────────────────────────
 async function generateExcelPdfBlob() {
-    const tableContainer = document.getElementById('tablePreviewWrapper');
-    const orientation = document.getElementById('pageOrientation').value;
+    const tableContainer = document.getElementById('excelTableContainer');
+    const orientation = document.getElementById('pageOrientation').value || 'landscape';
+    
+    // Create an unconstrained clone with clean print styles
+    const clone = tableContainer.cloneNode(true);
+    clone.style.position = 'absolute';
+    clone.style.left = '-9999px';
+    clone.style.top = '0';
+    clone.style.width = orientation === 'landscape' ? '1120px' : '794px';
+    clone.style.maxWidth = orientation === 'landscape' ? '1120px' : '794px';
+    clone.style.padding = '20px';
+    clone.style.background = '#ffffff';
+    clone.style.color = '#0f172a';
+    clone.style.overflow = 'visible';
+    clone.style.height = 'auto';
+    clone.style.maxHeight = 'none';
+    document.body.appendChild(clone);
 
     const opt = {
         margin: [10, 10, 10, 10],
         filename: 'spreadsheet.pdf',
         image: { type: 'jpeg', quality: 0.98 },
-        html2canvas: { scale: 2, useCORS: true },
+        html2canvas: { scale: 2, useCORS: true, backgroundColor: '#ffffff' },
         jsPDF: { unit: 'mm', format: 'a4', orientation: orientation },
+        pagebreak: { mode: ['avoid-all', 'css', 'legacy'] }
     };
 
-    return await html2pdf().set(opt).from(tableContainer).outputPdf('blob');
+    try {
+        const worker = html2pdf().set(opt).from(clone);
+        const pdfBlob = await worker.output('blob');
+        document.body.removeChild(clone);
+        return pdfBlob;
+    } catch (e) {
+        if (clone.parentNode) clone.parentNode.removeChild(clone);
+        throw e;
+    }
 }
 
 // ─── Convert & Download PDF ────────────────────────────────────

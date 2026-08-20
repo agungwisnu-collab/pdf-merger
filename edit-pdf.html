@@ -3,16 +3,16 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Edit Dokumen PDF — Tambah Teks, Gambar, Sorot & Coret PDF Online</title>
-    <meta name="description" content="Edit dokumen PDF online dengan menambahkan teks baru, stempel/foto, sorotan warna (highlight), dan coretan pensil secara instan di browser.">
-    <link rel="stylesheet" href="style.css?v=3">
-    <script src="theme.js?v=3"></script>
+    <title>Edit Dokumen PDF — Tambah Teks, Gambar, Bentuk & Coretan PDF Online</title>
+    <meta name="description" content="Edit dokumen PDF lengkap secara online dengan zoom, kustomisasi font, warna pena bebas, sisipkan foto dengan resize, serta tambahkan aneka bentuk (kotak, lingkaran, panah).">
+    <link rel="stylesheet" href="style.css?v=8">
+    <script src="theme.js?v=8"></script>
     <script src="https://unpkg.com/pdf-lib@1.17.1/dist/pdf-lib.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
     <link rel="manifest" href="manifest.json">
 </head>
 <body>
-        <!-- Universal Navbar -->
+    <!-- Universal Navbar -->
     <nav class="site-navbar">
         <div class="nav-container">
             <a href="index.html" class="nav-brand">
@@ -73,11 +73,11 @@
     </nav>
 
     <!-- Main Container -->
-    <main class="main-wrapper">
-        <div class="container">
+    <main class="main-wrapper" style="max-width: 1200px;">
+        <div class="container" style="max-width: 1100px;">
             <div class="header">
                 <h1>✍️ Edit Dokumen PDF</h1>
-                <p>Tambahkan teks baru, stempel/foto, sorotan (highlight), dan coretan pensil ke halaman PDF.<br>File <strong>tidak dikirim ke server</strong>, seluruh proses diolah di browser Anda.</p>
+                <p>Tambah teks kustom, coret pena multi-warna, sisipkan foto (dengan resize), serta aneka bentuk (kotak, lingkaran, panah).<br>Dilengkapi fitur <strong>Zoom in/out</strong> untuk pengeditan kalimat secara presisi langsung di browser.</p>
             </div>
 
             <!-- Upload Area -->
@@ -105,34 +105,217 @@
                     <button class="btn btn-danger-outline btn-sm" onclick="clearFile()">🔄 Ganti Dokumen</button>
                 </div>
 
-                <!-- Editor Toolbar -->
-                <div style="display: flex; gap: 8px; flex-wrap: wrap; margin-top: 16px; align-items: center; justify-content: space-between; background: var(--bg-card); padding: 10px 14px; border-radius: 12px; border: 1.5px solid var(--border-subtle);">
-                    <div style="display: flex; gap: 6px; flex-wrap: wrap; align-items: center;">
-                        <button class="btn btn-primary btn-small" onclick="addTextAnnotation()">➕ Tambah Teks</button>
-                        <button class="btn btn-secondary-sm" onclick="document.getElementById('imageAnnotationInput').click()">🖼️ Sisipkan Gambar</button>
-                        <input type="file" id="imageAnnotationInput" accept="image/*" hidden onchange="addImageAnnotation(this.files[0])" />
-                        <button class="btn btn-secondary-sm" onclick="addHighlightBox()">🟨 Sorot (Highlight)</button>
-                        <button class="btn btn-secondary-sm" id="drawBtn" onclick="toggleDrawingMode()">✏️ Coret Pena: <span id="drawStatus">OFF</span></button>
+                <!-- Advanced Editor Toolbar -->
+                <div class="editor-main-panel">
+                    <div class="editor-toolbar-box">
+                        <!-- Top Toolbar Controls -->
+                        <div class="editor-toolbar-row">
+                            <!-- Tool Selector Buttons -->
+                            <div class="editor-tool-group">
+                                <button class="editor-btn active" id="toolSelectBtn" onclick="setActiveTool('select')" title="Pilih &amp; Geser Objek">
+                                    <span class="editor-btn-icon">👆</span><span>Pilih</span>
+                                </button>
+                                <button class="editor-btn" id="toolTextBtn" onclick="setActiveTool('text')" title="Tambah Teks Baru">
+                                    <span class="editor-btn-icon">🔤</span><span>Tambah Teks</span>
+                                </button>
+                                <button class="editor-btn" id="toolReplaceTextBtn" onclick="setActiveTool('replaceText')" title="Ganti Teks Asli PDF (Klik teks asli untuk ganti)">
+                                    <span class="editor-btn-icon">📝</span><span>Ganti Teks PDF</span>
+                                </button>
+                                <button class="editor-btn" id="toolWhiteoutBtn" onclick="addWhiteoutBox()" title="Tip-Ex / Hapus Teks (Tutup dengan kotak putih)">
+                                    <span class="editor-btn-icon">⬜</span><span>Tip-Ex</span>
+                                </button>
+                                <button class="editor-btn" id="toolPenBtn" onclick="setActiveTool('pen')" title="Coret Pena Bebas">
+                                    <span class="editor-btn-icon">✏️</span><span>Pena</span>
+                                </button>
+                                <button class="editor-btn" id="toolHighlighterBtn" onclick="setActiveTool('highlighter')" title="Stabilo / Sorotan Warna">
+                                    <span class="editor-btn-icon">🖍️</span><span>Stabilo</span>
+                                </button>
+                                <button class="editor-btn" id="toolShapeBtn" onclick="setActiveTool('shape')" title="Tambah Bentuk (Kotak, Lingkaran, Panah)">
+                                    <span class="editor-btn-icon">🔷</span><span>Bentuk</span>
+                                </button>
+                                <button class="editor-btn" id="toolImageBtn" onclick="document.getElementById('imageAnnotationInput').click()" title="Sisipkan Gambar/Foto">
+                                    <span class="editor-btn-icon">🖼️</span><span>Foto</span>
+                                </button>
+                                <input type="file" id="imageAnnotationInput" accept="image/*" hidden onchange="handleImageInsert(this.files[0])" />
+                            </div>
+
+                            <!-- History, Zoom & Page Navigation -->
+                            <div class="editor-tool-group">
+                                <!-- Undo / Redo -->
+                                <button class="editor-btn" id="undoBtn" onclick="undoAction()" title="Undo (Ctrl+Z)" disabled>
+                                    <span>↶</span>
+                                </button>
+                                <button class="editor-btn" id="redoBtn" onclick="redoAction()" title="Redo (Ctrl+Y)" disabled>
+                                    <span>↷</span>
+                                </button>
+
+                                <!-- Zoom Pill -->
+                                <div class="editor-zoom-pill">
+                                    <button class="zoom-btn" onclick="zoomOut()" title="Perkecil (-)">−</button>
+                                    <span class="zoom-label" id="zoomDisplay" onclick="resetZoom()" title="Klik untuk reset 100%">100%</span>
+                                    <button class="zoom-btn" onclick="zoomIn()" title="Perbesar (+)">+</button>
+                                    <button class="zoom-btn" onclick="fitToWidth()" title="Pas Lebar Halaman" style="font-size: 0.72rem; padding: 0 4px; width: auto;">Fit</button>
+                                </div>
+
+                                <!-- Page Navigation -->
+                                <div style="display: inline-flex; align-items: center; gap: 4px; background: var(--bg-subtle); padding: 2px 6px; border-radius: 10px; border: 1px solid var(--border-subtle);">
+                                    <button class="zoom-btn" onclick="prevPage()" title="Halaman Sebelumnya">◀</button>
+                                    <span id="pageNavText" style="font-weight: 700; font-size: 0.8rem; min-width: 58px; text-align: center;">1 / 1</span>
+                                    <button class="zoom-btn" onclick="nextPage()" title="Halaman Selanjutnya">▶</button>
+                                </div>
+
+                                <button class="btn btn-danger-outline btn-sm" onclick="clearCurrentPageAnnotations()" title="Hapus seluruh editan di halaman ini">🗑️ Reset</button>
+                            </div>
+                        </div>
+
+                        <!-- Context-Sensitive Properties Bar -->
+                        <!-- 1. Text Properties -->
+                        <div id="propsText" class="editor-props-bar hidden">
+                            <div class="prop-item">
+                                <span class="prop-label">Font:</span>
+                                <select id="textFontFamily" class="prop-select" onchange="updateSelectedTextProp('fontFamily', this.value)">
+                                    <option value="Plus Jakarta Sans, sans-serif" selected>Plus Jakarta Sans</option>
+                                    <option value="Arial, sans-serif">Arial</option>
+                                    <option value="'Times New Roman', serif">Times New Roman</option>
+                                    <option value="'Courier New', monospace">Courier New</option>
+                                    <option value="Georgia, serif">Georgia</option>
+                                    <option value="'Comic Sans MS', cursive">Comic Sans</option>
+                                </select>
+                            </div>
+                            <div class="prop-item">
+                                <span class="prop-label">Ukuran:</span>
+                                <select id="textFontSize" class="prop-select" onchange="updateSelectedTextProp('fontSize', parseInt(this.value))">
+                                    <option value="12">12 px</option>
+                                    <option value="14">14 px</option>
+                                    <option value="16" selected>16 px</option>
+                                    <option value="18">18 px</option>
+                                    <option value="20">20 px</option>
+                                    <option value="24">24 px</option>
+                                    <option value="30">30 px</option>
+                                    <option value="36">36 px</option>
+                                    <option value="48">48 px</option>
+                                </select>
+                            </div>
+                            <div class="prop-item">
+                                <span class="prop-label">Warna:</span>
+                                <div class="color-palette-wrap">
+                                    <div class="color-dot active" style="background: #0f172a;" onclick="setTextTextColor('#0f172a')"></div>
+                                    <div class="color-dot" style="background: #ef4444;" onclick="setTextTextColor('#ef4444')"></div>
+                                    <div class="color-dot" style="background: #3b82f6;" onclick="setTextTextColor('#3b82f6')"></div>
+                                    <div class="color-dot" style="background: #10b981;" onclick="setTextTextColor('#10b981')"></div>
+                                    <input type="color" id="textColorPicker" class="prop-color-input" value="#0f172a" onchange="setTextTextColor(this.value)" title="Warna Kustom" />
+                                </div>
+                            </div>
+                            <div class="prop-item">
+                                <button type="button" id="textBoldBtn" class="editor-toggle-btn" onclick="toggleTextBold()"><b>B</b></button>
+                                <button type="button" id="textItalicBtn" class="editor-toggle-btn" onclick="toggleTextItalic()"><i>I</i></button>
+                                <button type="button" id="textBgBtn" class="editor-toggle-btn" onclick="toggleTextBackground()">🔲 Latar Putih</button>
+                            </div>
+                        </div>
+
+                        <!-- 2. Pen & Highlighter Properties -->
+                        <div id="propsPen" class="editor-props-bar hidden">
+                            <div class="prop-item">
+                                <span class="prop-label">Warna Tinta:</span>
+                                <div class="color-palette-wrap">
+                                    <div class="color-dot active" style="background: #ef4444;" onclick="setPenColor('#ef4444')"></div>
+                                    <div class="color-dot" style="background: #0f172a;" onclick="setPenColor('#0f172a')"></div>
+                                    <div class="color-dot" style="background: #3b82f6;" onclick="setPenColor('#3b82f6')"></div>
+                                    <div class="color-dot" style="background: #10b981;" onclick="setPenColor('#10b981')"></div>
+                                    <div class="color-dot" style="background: #f59e0b;" onclick="setPenColor('#f59e0b')"></div>
+                                    <div class="color-dot" style="background: #8b5cf6;" onclick="setPenColor('#8b5cf6')"></div>
+                                    <input type="color" id="penColorPicker" class="prop-color-input" value="#ef4444" onchange="setPenColor(this.value)" title="Warna Kustom" />
+                                </div>
+                            </div>
+                            <div class="prop-item">
+                                <span class="prop-label">Ketebalan:</span>
+                                <select id="penWidth" class="prop-select" onchange="setPenWidth(parseInt(this.value))">
+                                    <option value="2">Halus (2px)</option>
+                                    <option value="4" selected>Sedang (4px)</option>
+                                    <option value="8">Tebal (8px)</option>
+                                    <option value="16">Sangat Tebal (16px)</option>
+                                </select>
+                            </div>
+                            <div class="prop-item">
+                                <button type="button" id="penEraserBtn" class="editor-toggle-btn" onclick="toggleEraser()">🧹 Penghapus</button>
+                            </div>
+                        </div>
+
+                        <!-- 3. Shape Properties -->
+                        <div id="propsShape" class="editor-props-bar hidden">
+                            <div class="prop-item">
+                                <span class="prop-label">Bentuk:</span>
+                                <select id="shapeTypeSelect" class="prop-select" onchange="setShapeType(this.value)">
+                                    <option value="rect" selected>⬛ Kotak (Rectangle)</option>
+                                    <option value="circle">⭕ Lingkaran (Circle)</option>
+                                    <option value="line">➖ Garis Lurus (Line)</option>
+                                    <option value="arrow">➡️ Panah (Arrow)</option>
+                                    <option value="check">✅ Centang (Check)</option>
+                                    <option value="cross">❌ Silang (Cross)</option>
+                                </select>
+                            </div>
+                            <div class="prop-item">
+                                <span class="prop-label">Garis Tepi:</span>
+                                <div class="color-palette-wrap">
+                                    <div class="color-dot active" style="background: #ef4444;" onclick="setShapeStrokeColor('#ef4444')"></div>
+                                    <div class="color-dot" style="background: #3b82f6;" onclick="setShapeStrokeColor('#3b82f6')"></div>
+                                    <div class="color-dot" style="background: #10b981;" onclick="setShapeStrokeColor('#10b981')"></div>
+                                    <div class="color-dot" style="background: #0f172a;" onclick="setShapeStrokeColor('#0f172a')"></div>
+                                    <input type="color" id="shapeStrokePicker" class="prop-color-input" value="#ef4444" onchange="setShapeStrokeColor(this.value)" />
+                                </div>
+                            </div>
+                            <div class="prop-item">
+                                <span class="prop-label">Isi / Fill:</span>
+                                <select id="shapeFillSelect" class="prop-select" onchange="setShapeFill(this.value)">
+                                    <option value="transparent" selected>Transparan (Tanpa Isi)</option>
+                                    <option value="semi">Semi-Transparan (25%)</option>
+                                    <option value="solid">Solid Penuh (100%)</option>
+                                </select>
+                            </div>
+                            <div class="prop-item">
+                                <button type="button" class="btn btn-primary btn-small" onclick="addShapeToPage()">➕ Pasang Bentuk</button>
+                            </div>
+                        </div>
+
+                        <!-- 4. Image Properties -->
+                        <div id="propsImage" class="editor-props-bar hidden">
+                            <div class="prop-item">
+                                <span class="prop-label">Transparansi:</span>
+                                <input type="range" id="imageOpacitySlider" min="20" max="100" value="100" style="width: 100px; accent-color: var(--primary);" oninput="updateSelectedImageOpacity(this.value)" />
+                                <span id="imageOpacityVal" style="font-size: 0.78rem; font-weight: 700;">100%</span>
+                            </div>
+                            <div class="prop-item">
+                                <button type="button" class="editor-toggle-btn" onclick="rotateSelectedImage(90)">🔄 Putar 90°</button>
+                                <button type="button" class="btn btn-danger-outline btn-sm" onclick="deleteSelectedElement()">🗑️ Hapus Foto</button>
+                            </div>
+                        </div>
+
+                        <!-- 5. Whiteout / Tip-Ex Properties -->
+                        <div id="propsWhiteout" class="editor-props-bar hidden">
+                            <div class="prop-item">
+                                <span class="prop-label">⬜ Tip-Ex Putih:</span>
+                                <span style="font-size: 0.8rem; color: var(--text-muted);">Geser atau ubah ukuran kotak putih ini untuk menutupi teks/gambar lama.</span>
+                            </div>
+                            <div class="prop-item">
+                                <button type="button" class="btn btn-primary btn-small" onclick="addWhiteoutBox()">➕ Tambah Kotak Tip-Ex</button>
+                                <button type="button" class="btn btn-danger-outline btn-sm" onclick="deleteSelectedElement()">🗑️ Hapus Tip-Ex Ini</button>
+                            </div>
+                        </div>
                     </div>
-                    <div style="display: flex; gap: 8px; align-items: center;">
-                        <button class="btn btn-secondary-sm" onclick="prevPage()">◀</button>
-                        <span id="pageNavText" style="font-weight: 700; font-size: 0.85rem;">Hal 1 / 1</span>
-                        <button class="btn btn-secondary-sm" onclick="nextPage()">▶</button>
-                        <button class="btn btn-danger-outline btn-sm" onclick="clearCurrentPageAnnotations()">🗑️ Hapus Edit</button>
+
+                    <!-- Canvas Stage Viewport (Scrollable & Zoomable) -->
+                    <div class="editor-viewport-wrapper" id="editorViewport">
+                        <div class="editor-canvas-stage" id="canvasStage">
+                            <canvas id="pdfBgCanvas"></canvas>
+                            <div id="pdfTextLayer" class="pdf-text-layer"></div>
+                            <canvas id="drawingCanvas"></canvas>
+                            <div id="annotationOverlay"></div>
+                        </div>
                     </div>
                 </div>
 
-                <!-- Canvas Workspace -->
-                <div style="margin-top: 16px; text-align: center;">
-                    <div style="position: relative; display: inline-block; background: #1e293b; padding: 14px; border-radius: 14px; box-shadow: var(--shadow-md); max-width: 100%; overflow: auto;">
-                        <canvas id="pdfBgCanvas" style="display: block; margin: 0 auto; background: white; border-radius: 4px;"></canvas>
-                        <canvas id="drawingCanvas" style="position: absolute; left: 14px; top: 14px; pointer-events: none; border-radius: 4px;"></canvas>
-                        <div id="annotationOverlay" style="position: absolute; left: 14px; top: 14px; width: 100%; height: 100%; pointer-events: none;"></div>
-                    </div>
-                </div>
-
-                <!-- Output section -->
-                <div class="output-section" style="margin-top: 20px;">
+                <!-- Output Section -->
+                <div class="output-section" style="margin-top: 24px;">
                     <label for="outputName">💾 Nama file output:</label>
                     <div class="output-input-row">
                         <input type="text" id="outputName" class="output-input" value="edited_document" placeholder="nama_file" />
@@ -142,7 +325,7 @@
 
                 <div class="action-row-split">
                     <button class="btn btn-success btn-large" id="saveBtn" onclick="saveEditedPDF()">
-                        💾 Simpan &amp; Download PDF
+                        💾 Simpan &amp; Unduh PDF
                     </button>
                     <button class="btn-gdrive-save" id="saveGDriveBtn" onclick="saveEditedToGDrive()">
                         <svg viewBox="0 0 87.3 78" xmlns="http://www.w3.org/2000/svg"><path d="m6.6 66.85 3.85 6.65c.8 1.4 1.95 2.5 3.3 3.3l13.75-23.8h-27.5c0 1.55.4 3.1 1.2 4.5z" fill="#0066da"/><path d="m43.65 25-13.75-23.8c-1.35.8-2.5 1.9-3.3 3.3l-25.4 44c-.8 1.4-1.2 2.95-1.2 4.5h27.5z" fill="#00ac47"/><path d="m73.55 76.8c1.35-.8 2.5-1.9 3.3-3.3l1.6-2.75 7.65-13.25c.8-1.4 1.2-2.95 1.2-4.5h-27.502l5.852 11.5z" fill="#ea4335"/><path d="m43.65 25 13.75-23.8c-1.35-.8-2.9-1.2-4.5-1.2h-18.5c-1.6 0-3.15.45-4.5 1.2z" fill="#00832d"/><path d="m59.8 53h-32.3l-13.75 23.8c1.35.8 2.9 1.2 4.5 1.2h50.8c1.6 0 3.15-.45 4.5-1.2z" fill="#2684fc"/><path d="m73.4 26.5-12.7-22c-.8-1.4-1.95-2.5-3.3-3.3l-13.75 23.8 16.15 28h27.45c0-1.55-.4-3.1-1.2-4.5z" fill="#ffba00"/></svg>
@@ -161,13 +344,13 @@
             <div id="statusBox" class="status-box hidden"></div>
 
             <div class="footer">
-                <p>🔒 100% Aman · 🆓 Gratis · ⚡ Cepat · Tidak perlu login</p>
+                <p>🔒 100% Client-Side · 🆓 Tanpa Batasan Kuota · ⚡ Render High-Resolution</p>
             </div>
         </div>
     </main>
 
-    <script src="gdrive-config.js?v=3"></script>
-    <script src="gdrive-picker.js?v=3"></script>
-    <script src="edit-pdf.js?v=3"></script>
+    <script src="gdrive-config.js?v=4"></script>
+    <script src="gdrive-picker.js?v=4"></script>
+    <script src="edit-pdf.js?v=8"></script>
 </body>
 </html>
