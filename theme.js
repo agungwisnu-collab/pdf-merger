@@ -97,43 +97,81 @@
         window.filterTools();
     };
 
+    window.clearToolSearch = function () {
+        const searchInput = document.getElementById('toolSearchInput');
+        if (searchInput) {
+            searchInput.value = '';
+            searchInput.focus();
+            window.filterTools();
+        }
+    };
+
     window.filterTools = function () {
         const searchInput = document.getElementById('toolSearchInput');
         const query = (searchInput?.value || '').toLowerCase().trim();
-        const cards = document.querySelectorAll('.hub-tool-card');
-        let visibleCount = 0;
+        const clearBtn = document.getElementById('clearSearchBtn');
+        const badge = document.getElementById('searchKeyBadge');
 
-        cards.forEach(card => {
-            const cardCat = card.getAttribute('data-category');
-            const cardKeywords = (card.getAttribute('data-keywords') || '').toLowerCase();
-            const cardTitle = (card.querySelector('.hub-card-title')?.textContent || '').toLowerCase();
-            const cardDesc = (card.querySelector('.hub-card-desc')?.textContent || '').toLowerCase();
-
-            const matchesCategory = currentCategory === 'all' || cardCat === currentCategory;
-            const matchesQuery = !query || cardTitle.includes(query) || cardDesc.includes(query) || cardKeywords.includes(query);
-
-            if (matchesCategory && matchesQuery) {
-                card.style.display = 'flex';
-                visibleCount++;
+        if (clearBtn && badge) {
+            if (query.length > 0) {
+                clearBtn.style.display = 'flex';
+                badge.style.display = 'none';
             } else {
-                card.style.display = 'none';
+                clearBtn.style.display = 'none';
+                badge.style.display = 'block';
+            }
+        }
+
+        const sections = document.querySelectorAll('.category-section');
+        let totalVisible = 0;
+
+        sections.forEach(section => {
+            const secCat = section.getAttribute('data-category');
+            const cards = section.querySelectorAll('.hub-tool-card');
+            let sectionVisibleCount = 0;
+
+            const categoryMatches = currentCategory === 'all' || secCat === currentCategory;
+
+            cards.forEach(card => {
+                const cardKeywords = (card.getAttribute('data-keywords') || '').toLowerCase();
+                const cardTitle = (card.querySelector('.hub-card-title')?.textContent || '').toLowerCase();
+                const cardDesc = (card.querySelector('.hub-card-desc')?.textContent || '').toLowerCase();
+
+                const matchesQuery = !query || cardTitle.includes(query) || cardDesc.includes(query) || cardKeywords.includes(query);
+
+                if (categoryMatches && matchesQuery) {
+                    card.style.display = 'flex';
+                    sectionVisibleCount++;
+                    totalVisible++;
+                } else {
+                    card.style.display = 'none';
+                }
+            });
+
+            // Sembunyikan section jika tidak ada kartu yang cocok atau kategori tidak sesuai
+            if (sectionVisibleCount > 0 && categoryMatches) {
+                section.style.display = 'block';
+            } else {
+                section.style.display = 'none';
             }
         });
 
-        // Handle empty state
-        const grid = document.getElementById('toolsGrid');
+        // Handle empty state across all sections
+        const container = document.getElementById('toolsSectionContainer');
         let emptyState = document.getElementById('toolsEmptyState');
-        if (visibleCount === 0) {
-            if (!emptyState && grid) {
+        if (totalVisible === 0) {
+            if (!emptyState && container) {
                 emptyState = document.createElement('div');
                 emptyState.id = 'toolsEmptyState';
                 emptyState.className = 'tools-empty-state';
+                emptyState.style.textAlign = 'center';
+                emptyState.style.padding = '40px 20px';
                 emptyState.innerHTML = `
-                    <div style="font-size: 2.5rem; margin-bottom: 8px;">🔍</div>
-                    <h3 style="font-size: 1.1rem; color: var(--text-main); margin-bottom: 4px;">Tidak ada alat yang cocok</h3>
-                    <p style="font-size: 0.88rem;">Coba cari dengan kata kunci lain seperti <em>"split"</em>, <em>"word"</em>, <em>"putar"</em>, atau <em>"kunci"</em>.</p>
+                    <div style="font-size: 2.8rem; margin-bottom: 12px;">🔍</div>
+                    <h3 style="font-size: 1.15rem; color: var(--text-main); margin-bottom: 6px; font-weight: 700;">Tidak ada alat yang cocok</h3>
+                    <p style="font-size: 0.9rem; color: var(--text-muted);">Coba cari dengan kata kunci lain seperti <em>"gabung"</em>, <em>"split"</em>, <em>"word"</em>, <em>"putar"</em>, atau <em>"kunci"</em>.</p>
                 `;
-                grid.appendChild(emptyState);
+                container.appendChild(emptyState);
             }
         } else if (emptyState) {
             emptyState.remove();
