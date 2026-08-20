@@ -1,0 +1,9 @@
+# Dokumen perencanaan dan catatan pengembangan internal
+ROADMAP_DESIGN_UX.md
+
+# OS & Editor files
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+*.log
