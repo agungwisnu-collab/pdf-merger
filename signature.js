@@ -1,6 +1,6 @@
 /** ============================================================
- *  signature.js — PDF Signature Tool
- *  Libraries: pdf-lib (embed), PDF.js (preview & thumbnails)
+ *  signature.js — PDF Signature Studio Controller
+ *  Libraries: pdf-lib (embed), PDF.js (preview & rendering)
  * ============================================================ */
 
 pdfjsLib.GlobalWorkerOptions.workerSrc =
@@ -8,21 +8,22 @@ pdfjsLib.GlobalWorkerOptions.workerSrc =
 
 // ─── State ─────────────────────────────────────────────────────
 const state = {
-    pdfFile:        null,
-    pdfJsDoc:       null,
-    totalPages:     0,
-    selectedPage:   1,
+    pdfFile:          null,
+    pdfJsDoc:         null,
+    totalPages:       0,
+    selectedPage:     1,
     signatureDataUrl: null,
-    activeTab:      'draw',
-    sigPos:  { x: 50, y: 50 },
-    sigWidth: 150,
+    activeTab:        'draw',
+    sigPos:           { x: 50, y: 50 },
+    sigWidth:         150,
+    zoomScale:        1.0,
 };
 
-let isDrawing    = false;
-let hasDrawn     = false;
+let isDrawing  = false;
+let hasDrawn   = false;
 let lastX = 0, lastY = 0;
-let drawCtx      = null;
-let drawCanvas   = null;
+let drawCtx    = null;
+let drawCanvas = null;
 
 // ─── Upload PDF ─────────────────────────────────────────────────
 document.getElementById('pdfInput').addEventListener('change', async (e) => {
@@ -54,102 +55,127 @@ function pickPDFFromGDrive() {
     });
 }
 
+// ─── Load PDF ──────────────────────────────────────────────────
 async function loadPDF(file) {
     try {
         state.pdfFile = file;
-        document.getElementById('uploadedFileName').textContent = `📄 ${file.name}`;
-        document.getElementById('uploadedFile').classList.remove('hidden');
-        document.getElementById('dropZone').classList.add('hidden');
-
         const buf = await file.arrayBuffer();
         state.pdfJsDoc = await pdfjsLib.getDocument({ data: buf }).promise;
         state.totalPages = state.pdfJsDoc.numPages;
+        state.selectedPage = 1;
 
-        enableStep('stepPage');
-        await renderPageSelector();
-        enableStep('stepSign');
+        // Update Document Info
+        document.getElementById('docName').textContent = file.name;
+        document.getElementById('docName').title = file.name;
+        document.getElementById('docMeta').textContent = `${formatSize(file.size)} · ${state.totalPages} Halaman`;
+        document.getElementById('curPageNum').textContent = '1';
+        document.getElementById('totalPageNum').textContent = state.totalPages;
+
+        // Switch to Studio View
+        document.getElementById('uploadView').classList.add('hidden');
+        document.getElementById('studioView').classList.remove('hidden');
+
         initDrawCanvas();
+        updatePageNavButtons();
+        await renderPDFPreview();
     } catch (err) {
         alert('Gagal memuat PDF: ' + err.message);
     }
 }
 
 function clearPDF() {
-    state.pdfFile    = null;
-    state.pdfJsDoc   = null;
-    state.totalPages = 0;
+    state.pdfFile         = null;
+    state.pdfJsDoc        = null;
+    state.totalPages      = 0;
+    state.selectedPage    = 1;
     state.signatureDataUrl = null;
 
-    document.getElementById('uploadedFile').classList.add('hidden');
-    document.getElementById('dropZone').classList.remove('hidden');
+    document.getElementById('studioView').classList.add('hidden');
+    document.getElementById('uploadView').classList.remove('hidden');
     document.getElementById('pdfInput').value = '';
-    document.getElementById('pageSelector').innerHTML =
-        '<p class="placeholder-text">Upload PDF terlebih dahulu</p>';
-
-    ['stepPage','stepSign','stepPosition','stepDownload'].forEach(disableStep);
-    document.getElementById('signatureOverlay').classList.add('hidden');
     document.getElementById('downloadStatus').classList.add('hidden');
 }
 
-// ─── Page Selector ──────────────────────────────────────────────
-async function renderPageSelector() {
-    const container = document.getElementById('pageSelector');
-    container.innerHTML = '';
-
-    for (let i = 1; i <= state.totalPages; i++) {
-        const page     = await state.pdfJsDoc.getPage(i);
-        const viewport = page.getViewport({ scale: 0.22 });
-
-        const canvas  = document.createElement('canvas');
-        canvas.width  = viewport.width;
-        canvas.height = viewport.height;
-        await page.render({ canvasContext: canvas.getContext('2d'), viewport }).promise;
-
-        const item = document.createElement('div');
-        item.className = 'page-thumb-item' + (i === 1 ? ' selected' : '');
-        item.id        = `pageThumb${i}`;
-        item.onclick   = () => selectPage(i);
-
-        const label = document.createElement('span');
-        label.textContent = `Hal. ${i}`;
-
-        item.appendChild(canvas);
-        item.appendChild(label);
-        container.appendChild(item);
+// ─── Page Navigation ───────────────────────────────────────────
+function changePage(delta) {
+    const target = state.selectedPage + delta;
+    if (target >= 1 && target <= state.totalPages) {
+        state.selectedPage = target;
+        document.getElementById('curPageNum').textContent = target;
+        updatePageNavButtons();
+        renderPDFPreview();
     }
-
-    state.selectedPage = 1;
 }
 
-function selectPage(num) {
-    document.querySelectorAll('.page-thumb-item').forEach(el => el.classList.remove('selected'));
-    document.getElementById(`pageThumb${num}`).classList.add('selected');
-    state.selectedPage = num;
-    if (state.signatureDataUrl) renderPDFPreview();
+function updatePageNavButtons() {
+    document.getElementById('prevPageBtn').disabled = state.selectedPage <= 1;
+    document.getElementById('nextPageBtn').disabled = state.selectedPage >= state.totalPages;
+}
+
+// ─── Zoom Controls ─────────────────────────────────────────────
+function zoomDoc(delta) {
+    state.zoomScale = Math.max(0.4, Math.min(2.5, state.zoomScale + delta));
+    document.getElementById('zoomVal').textContent = `${Math.round(state.zoomScale * 100)}%`;
+    renderPDFPreview();
+}
+
+function zoomFit() {
+    state.zoomScale = 1.0;
+    document.getElementById('zoomVal').textContent = '100%';
+    renderPDFPreview();
+}
+
+// ─── Render PDF Page Preview ───────────────────────────────────
+async function renderPDFPreview() {
+    if (!state.pdfJsDoc) return;
+
+    const page      = await state.pdfJsDoc.getPage(state.selectedPage);
+    const canvas    = document.getElementById('pdfPreviewCanvas');
+    const container = document.getElementById('pdfPreviewContainer');
+
+    // Base viewport calculation
+    const baseVp = page.getViewport({ scale: 1.0 });
+    // Optimal container width
+    const wrapW = document.getElementById('canvasScrollWrap').clientWidth - 48;
+    const baseFitScale = Math.min((wrapW / baseVp.width), 1.35);
+    const renderScale = baseFitScale * state.zoomScale;
+
+    const viewport = page.getViewport({ scale: renderScale });
+
+    canvas.width  = viewport.width;
+    canvas.height = viewport.height;
+
+    await page.render({ canvasContext: canvas.getContext('2d'), viewport }).promise;
+
+    // Position overlay
+    const overlay = document.getElementById('signatureOverlay');
+    if (state.signatureDataUrl) {
+        overlay.classList.remove('hidden');
+        document.getElementById('signaturePreview').src = state.signatureDataUrl;
+    }
+
+    updatePosDisplay();
+    initDrag();
 }
 
 // ─── Drawing Canvas ─────────────────────────────────────────────
 function initDrawCanvas() {
     drawCanvas = document.getElementById('signatureCanvas');
     drawCtx    = drawCanvas.getContext('2d');
-
     const wrapper = document.getElementById('canvasWrapper');
 
     function resize() {
         const ratio = window.devicePixelRatio || 1;
-        const w = wrapper.clientWidth;
+        const w = wrapper.clientWidth || 300;
         drawCanvas.width  = w * ratio;
-        drawCanvas.height = 180 * ratio;
+        drawCanvas.height = 140 * ratio;
         drawCanvas.style.width  = w + 'px';
-        drawCanvas.style.height = '180px';
+        drawCanvas.style.height = '140px';
         drawCtx.scale(ratio, ratio);
         applyPenStyle();
-        hasDrawn = false;
-        document.getElementById('canvasHint').classList.remove('hidden');
     }
 
     resize();
-    window.addEventListener('resize', resize);
 
     function getPos(e) {
         const rect = drawCanvas.getBoundingClientRect();
@@ -162,7 +188,7 @@ function initDrawCanvas() {
         isDrawing = true;
         const p = getPos(e);
         [lastX, lastY] = [p.x, p.y];
-        document.getElementById('canvasHint').classList.add('hidden');
+        document.getElementById('canvasHint')?.classList.add('hidden');
     }
 
     function move(e) {
@@ -181,13 +207,13 @@ function initDrawCanvas() {
 
     function stop() { isDrawing = false; }
 
-    drawCanvas.addEventListener('mousedown',  start);
-    drawCanvas.addEventListener('mousemove',  move);
-    drawCanvas.addEventListener('mouseup',    stop);
-    drawCanvas.addEventListener('mouseleave', stop);
-    drawCanvas.addEventListener('touchstart', start, { passive: false });
-    drawCanvas.addEventListener('touchmove',  move,  { passive: false });
-    drawCanvas.addEventListener('touchend',   stop);
+    drawCanvas.onmousedown  = start;
+    drawCanvas.onmousemove  = move;
+    drawCanvas.onmouseup    = stop;
+    drawCanvas.onmouseleave = stop;
+    drawCanvas.ontouchstart = start;
+    drawCanvas.ontouchmove  = move;
+    drawCanvas.ontouchend   = stop;
 }
 
 function applyPenStyle() {
@@ -202,34 +228,34 @@ function clearCanvas() {
     if (!drawCtx || !drawCanvas) return;
     drawCtx.clearRect(0, 0, drawCanvas.width, drawCanvas.height);
     hasDrawn = false;
-    document.getElementById('canvasHint').classList.remove('hidden');
-    if (state.activeTab === 'draw')
+    document.getElementById('canvasHint')?.classList.remove('hidden');
+    if (state.activeTab === 'draw') {
         document.getElementById('useSignatureBtn').disabled = true;
+    }
 }
 
-document.getElementById('penSize').addEventListener('input', function () {
-    document.getElementById('penSizeLabel').textContent = this.value + 'px';
-});
+document.getElementById('penColor').addEventListener('input', applyPenStyle);
+document.getElementById('penSize').addEventListener('input', applyPenStyle);
 
 // ─── Type Signature ─────────────────────────────────────────────
 function updateTypeSignature() {
-    const text  = document.getElementById('typeInput').value;
-    const font  = document.getElementById('fontSelect').value;
-    const color = document.getElementById('typeColor').value;
+    const text   = document.getElementById('typeInput').value;
+    const font   = document.getElementById('fontSelect').value;
+    const color  = document.getElementById('typeColor').value;
     const canvas = document.getElementById('typeCanvas');
     const ctx    = canvas.getContext('2d');
 
-    canvas.width  = (canvas.parentElement?.clientWidth || 500);
-    canvas.height = 140;
+    canvas.width  = (canvas.parentElement?.clientWidth || 300);
+    canvas.height = 90;
     ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-    if (!text) {
+    if (!text.trim()) {
         document.getElementById('useSignatureBtn').disabled = true;
         return;
     }
 
     ctx.fillStyle    = color;
-    ctx.font         = `64px '${font}'`;
+    ctx.font         = `46px '${font}'`;
     ctx.textAlign    = 'center';
     ctx.textBaseline = 'middle';
     ctx.fillText(text, canvas.width / 2, canvas.height / 2);
@@ -247,9 +273,10 @@ document.getElementById('sigImageInput').addEventListener('change', function (e)
         img.onload = () => {
             const canvas = document.getElementById('uploadCanvas');
             canvas.classList.remove('hidden');
+            document.getElementById('magicCleanBtn').classList.remove('hidden');
             const ctx = canvas.getContext('2d');
-            canvas.width  = canvas.parentElement?.clientWidth || 500;
-            canvas.height = 150;
+            canvas.width  = canvas.parentElement?.clientWidth || 300;
+            canvas.height = 120;
             ctx.clearRect(0, 0, canvas.width, canvas.height);
             const scale = Math.min(canvas.width / img.width, canvas.height / img.height);
             const w = img.width * scale, h = img.height * scale;
@@ -261,7 +288,36 @@ document.getElementById('sigImageInput').addEventListener('change', function (e)
     reader.readAsDataURL(file);
 });
 
-// ─── Tab Switch ─────────────────────────────────────────────────
+// ─── Magic Auto-Clean White Background ──────────────────────────
+function autoCleanSignatureBackground() {
+    const canvas = document.getElementById('uploadCanvas');
+    const ctx = canvas.getContext('2d');
+    const imgData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+    const data = imgData.data;
+
+    for (let i = 0; i < data.length; i += 4) {
+        const r = data[i];
+        const g = data[i + 1];
+        const b = data[i + 2];
+        const brightness = (r * 0.299 + g * 0.587 + b * 0.114);
+
+        // Kertas putih / abu-abu terang diubah menjadi transparan
+        if (brightness > 185) {
+            const alphaFactor = Math.max(0, (255 - brightness) / 70);
+            data[i + 3] = Math.round(data[i + 3] * alphaFactor);
+        } else {
+            // Gelapkan goresan tinta agar kontras & jelas
+            data[i]     = Math.max(0, r * 0.85);
+            data[i + 1] = Math.max(0, g * 0.85);
+            data[i + 2] = Math.max(0, b * 0.85);
+        }
+    }
+
+    ctx.putImageData(imgData, 0, 0);
+    useSignature();
+}
+
+// ─── Tab Switcher ───────────────────────────────────────────────
 function switchTab(tab, btnEl) {
     state.activeTab = tab;
 
@@ -277,7 +333,7 @@ function switchTab(tab, btnEl) {
     else if (tab === 'upload') btn.disabled = document.getElementById('uploadCanvas').classList.contains('hidden');
 }
 
-// ─── Use Signature ──────────────────────────────────────────────
+// ─── Apply Signature into Overlay ──────────────────────────────
 function useSignature() {
     let canvas;
     if      (state.activeTab === 'draw')   canvas = document.getElementById('signatureCanvas');
@@ -286,52 +342,15 @@ function useSignature() {
 
     state.signatureDataUrl = canvas.toDataURL('image/png');
 
-    enableStep('stepPosition');
-    enableStep('stepDownload');
-    renderPDFPreview();
-
-    document.getElementById('stepPosition').scrollIntoView({ behavior: 'smooth', block: 'start' });
-}
-
-// ─── PDF Preview ─────────────────────────────────────────────────
-async function renderPDFPreview() {
-    if (!state.pdfJsDoc || !state.signatureDataUrl) return;
-
-    const page     = await state.pdfJsDoc.getPage(state.selectedPage);
-    const wrapper  = document.getElementById('preview-scroll-wrapper') ||
-                     document.querySelector('.preview-scroll-wrapper');
-    const container = document.getElementById('pdfPreviewContainer');
-    const canvas   = document.getElementById('pdfPreviewCanvas');
-
-    const maxW     = container.parentElement.clientWidth - 6;
-    const vp1      = page.getViewport({ scale: 1 });
-    const scale    = maxW / vp1.width;
-    const viewport = page.getViewport({ scale });
-
-    canvas.width  = viewport.width;
-    canvas.height = viewport.height;
-
-    await page.render({ canvasContext: canvas.getContext('2d'), viewport }).promise;
-
-    // Signature overlay
     const overlay = document.getElementById('signatureOverlay');
-    const img     = document.getElementById('signaturePreview');
+    const img = document.getElementById('signaturePreview');
     img.src = state.signatureDataUrl;
-
-    overlay.style.left   = state.sigPos.x + 'px';
-    overlay.style.top    = state.sigPos.y + 'px';
-    overlay.style.width  = state.sigWidth + 'px';
-    overlay.style.height = 'auto';
     overlay.classList.remove('hidden');
 
-    document.getElementById('currentPageInfo').textContent =
-        `${state.selectedPage} / ${state.totalPages}`;
-
     updatePosDisplay();
-    initDrag();
 }
 
-// ─── Drag & Resize — stable module-level state ─────────────────
+// ─── Drag & Resize Overlay Logic ───────────────────────────────
 const drag = { mode: null, startX: 0, startY: 0, startL: 0, startT: 0, startW: 0 };
 
 function _dragStart(e, mode) {
@@ -374,7 +393,7 @@ function _onDragMove(e) {
         overlay.style.top  = newT + 'px';
         state.sigPos = { x: newL, y: newT };
     } else {
-        const newW = Math.max(40, Math.min(drag.startW + dx, 600));
+        const newW = Math.max(40, Math.min(drag.startW + dx, container.clientWidth));
         overlay.style.width = newW + 'px';
         state.sigWidth = newW;
         document.getElementById('sigSize').value = Math.round(newW);
@@ -385,14 +404,12 @@ function _onDragMove(e) {
 
 function _onDragEnd() { drag.mode = null; }
 
-// Attach global move/end once at module load
 document.addEventListener('mousemove', _onDragMove);
 document.addEventListener('mouseup',   _onDragEnd);
 document.addEventListener('touchmove', _onDragMove, { passive: false });
 document.addEventListener('touchend',  _onDragEnd);
 
 function initDrag() {
-    // Re-bind overlay & handle listeners (removing first to prevent duplicates)
     const overlay = document.getElementById('signatureOverlay');
     const handle  = document.getElementById('resizeHandle');
 
@@ -409,32 +426,45 @@ function initDrag() {
 
 function updatePosDisplay() {
     const overlay = document.getElementById('signatureOverlay');
-    document.getElementById('posX').textContent = Math.round(overlay?.offsetLeft ?? state.sigPos.x);
-    document.getElementById('posY').textContent = Math.round(overlay?.offsetTop  ?? state.sigPos.y);
-    document.getElementById('posW').textContent = Math.round(overlay?.offsetWidth ?? state.sigWidth);
+    if (overlay) {
+        document.getElementById('posX').textContent = Math.round(overlay.offsetLeft);
+        document.getElementById('posY').textContent = Math.round(overlay.offsetTop);
+        document.getElementById('posW').textContent = Math.round(overlay.offsetWidth);
+    }
 }
 
 function updateSigSize(val) {
     state.sigWidth = parseInt(val);
     document.getElementById('sigSizeLabel').textContent = val + 'px';
     const overlay = document.getElementById('signatureOverlay');
-    overlay.style.width = val + 'px';
+    if (overlay) overlay.style.width = val + 'px';
     updatePosDisplay();
 }
 
 function resetPosition() {
     state.sigPos = { x: 50, y: 50 };
     const overlay = document.getElementById('signatureOverlay');
-    overlay.style.left = '50px';
-    overlay.style.top  = '50px';
+    if (overlay) {
+        overlay.style.left = '50px';
+        overlay.style.top  = '50px';
+    }
     updatePosDisplay();
 }
 
-// ─── Apply Signature & Download ─────────────────────────────────
+// ─── Apply Signature into PDF & Download ────────────────────────
 async function applySignatureAndDownload() {
+    if (!state.pdfFile) {
+        alert('Harap unggah dokumen PDF terlebih dahulu.');
+        return;
+    }
+    if (!state.signatureDataUrl) {
+        alert('Harap buat dan klik "Pasang Tanda Tangan" terlebih dahulu.');
+        return;
+    }
+
     const statusBox = document.getElementById('downloadStatus');
     statusBox.className = 'status-box';
-    statusBox.textContent = '⏳ Memproses tanda tangan...';
+    statusBox.textContent = '⏳ Memproses tanda tangan ke dokumen...';
     statusBox.classList.remove('hidden');
 
     try {
@@ -458,14 +488,14 @@ async function applySignatureAndDownload() {
         const scaleX = pageW / previewCanvas.width;
         const scaleY = pageH / previewCanvas.height;
 
-        // Overlay position & size from DOM
+        // Overlay position & size
         const overlay     = document.getElementById('signatureOverlay');
         const overlayLeft = overlay.offsetLeft;
         const overlayTop  = overlay.offsetTop;
         const overlayW    = overlay.offsetWidth;
         const overlayH    = overlay.offsetHeight;
 
-        // PDF coordinates (Y axis is flipped in PDF)
+        // PDF coordinates (Y origin is bottom-left in PDF)
         const pdfX = overlayLeft * scaleX;
         const pdfW = overlayW   * scaleX;
         const pdfH = overlayH   * scaleY;
@@ -489,12 +519,7 @@ async function applySignatureAndDownload() {
         setTimeout(() => URL.revokeObjectURL(url), 10000);
 
         statusBox.className = 'status-box success';
-        statusBox.innerHTML = `
-            <div>✅ <strong>"${name}"</strong> berhasil ditandatangani &amp; didownload!</div>
-            <button class="btn btn-secondary btn-sm reset-form-btn" onclick="resetForm()">
-                🔄 Tanda Tangani PDF Lain
-            </button>
-        `;
+        statusBox.innerHTML = `✅ Berhasil! Dokumen "${name}" telah ditandatangani. Unduhan dimulai.`;
 
     } catch (err) {
         statusBox.className = 'status-box error';
@@ -503,87 +528,9 @@ async function applySignatureAndDownload() {
     }
 }
 
-// ─── Reset Form ─────────────────────────────────────────────────
-function resetForm() {
-    // Reset state
-    state.pdfFile         = null;
-    state.pdfJsDoc        = null;
-    state.totalPages      = 0;
-    state.selectedPage    = 1;
-    state.signatureDataUrl = null;
-    state.activeTab       = 'draw';
-    state.sigPos          = { x: 50, y: 50 };
-    state.sigWidth        = 150;
-
-    // Reset upload area
-    document.getElementById('uploadedFile').classList.add('hidden');
-    document.getElementById('dropZone').classList.remove('hidden');
-    document.getElementById('pdfInput').value = '';
-
-    // Reset page selector
-    document.getElementById('pageSelector').innerHTML =
-        '<p class="placeholder-text">Upload PDF terlebih dahulu</p>';
-
-    // Reset drawing canvas
-    hasDrawn = false;
-    if (drawCtx && drawCanvas) {
-        drawCtx.clearRect(0, 0, drawCanvas.width, drawCanvas.height);
-    }
-    document.getElementById('canvasHint')?.classList.remove('hidden');
-
-    // Reset type tab
-    document.getElementById('typeInput').value = '';
-    const typeCanvas = document.getElementById('typeCanvas');
-    typeCanvas.getContext('2d').clearRect(0, 0, typeCanvas.width, typeCanvas.height);
-
-    // Reset upload tab
-    const uploadCanvas = document.getElementById('uploadCanvas');
-    uploadCanvas.getContext('2d').clearRect(0, 0, uploadCanvas.width, uploadCanvas.height);
-    uploadCanvas.classList.add('hidden');
-    document.getElementById('sigImageInput').value = '';
-
-    // Reset tabs UI back to 'draw'
-    document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
-    document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
-    document.getElementById('tabBtnDraw').classList.add('active');
-    document.getElementById('tabDraw').classList.add('active');
-
-    // Reset use-signature button
-    document.getElementById('useSignatureBtn').disabled = true;
-
-    // Reset signature overlay
-    const overlay = document.getElementById('signatureOverlay');
-    overlay.classList.add('hidden');
-    overlay.style.left  = '50px';
-    overlay.style.top   = '50px';
-    overlay.style.width = '150px';
-    document.getElementById('signaturePreview').src = '';
-
-    // Reset size slider
-    document.getElementById('sigSize').value = 150;
-    document.getElementById('sigSizeLabel').textContent = '150px';
-
-    // Reset output name
-    document.getElementById('outputName').value = 'signed_document';
-
-    // Reset status box
-    const statusBox = document.getElementById('downloadStatus');
-    statusBox.className = 'status-box hidden';
-    statusBox.innerHTML = '';
-
-    // Reset position display
-    document.getElementById('posX').textContent = '50';
-    document.getElementById('posY').textContent = '50';
-    document.getElementById('posW').textContent = '150';
-    document.getElementById('currentPageInfo').textContent = '-';
-
-    // Disable steps 2-5
-    ['stepPage','stepSign','stepPosition','stepDownload'].forEach(disableStep);
-
-    // Scroll ke atas
-    document.getElementById('stepUpload').scrollIntoView({ behavior: 'smooth', block: 'start' });
-}
-
 // ─── Helpers ────────────────────────────────────────────────────
-function enableStep(id)  { document.getElementById(id).classList.remove('step-disabled'); }
-function disableStep(id) { document.getElementById(id).classList.add('step-disabled'); }
+function formatSize(bytes) {
+    if (bytes < 1024)        return bytes + ' B';
+    if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB';
+    return (bytes / (1024 * 1024)).toFixed(2) + ' MB';
+}

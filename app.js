@@ -89,15 +89,15 @@ async function loadPdfItem(file) {
         item.selectedPages = new Set(Array.from({ length: pdfDoc.numPages }, (_, i) => i + 1));
         item.pageInput = pdfDoc.numPages > 1 ? `1-${pdfDoc.numPages}` : '1';
 
-        // render thumbnail halaman pertama
+        // render thumbnail halaman pertama dengan resolusi tajam
         const page    = await pdfDoc.getPage(1);
-        const scale   = 0.3;
+        const scale   = 0.5;
         const viewport = page.getViewport({ scale });
         const canvas  = document.createElement('canvas');
         canvas.width  = viewport.width;
         canvas.height = viewport.height;
         await page.render({ canvasContext: canvas.getContext('2d'), viewport }).promise;
-        item.thumbnail = canvas.toDataURL('image/jpeg', 0.7);
+        item.thumbnail = canvas.toDataURL('image/jpeg', 0.85);
 
     } catch {
         item.totalPages = 0;

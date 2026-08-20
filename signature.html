@@ -3,192 +3,230 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Tanda Tangan PDF - PDF Tools</title>
+    <title>Tanda Tangan PDF — Studio Tanda Tangan Dokumen Digital Online Gratis</title>
     <link rel="stylesheet" href="style.css">
     <link rel="stylesheet" href="signature.css">
+    <!-- Theme Controller (Anti-flash) -->
+    <script src="theme.js"></script>
     <script src="https://unpkg.com/pdf-lib@1.17.1/dist/pdf-lib.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
     <link href="https://fonts.googleapis.com/css2?family=Dancing+Script:wght@700&family=Pacifico&family=Great+Vibes&family=Sacramento&display=swap" rel="stylesheet">
 </head>
 <body>
-    <div class="container sig-container">
-
-        <!-- Header -->
-        <div class="header">
-            <h1>✍️ Tanda Tangan PDF</h1>
-            <p>Tambahkan tanda tangan ke dokumen PDF — gratis, aman, langsung di browser.</p>
-            <a href="index.html" class="nav-btn nav-btn-outline">← Kembali ke PDF Merger</a>
-            <a href="image-to-pdf.html" class="nav-btn" style="margin-left:8px;">🖼️ Gambar ke PDF</a>
-        </div>
-
-        <!-- STEP 1: Upload PDF -->
-        <div class="step-card" id="stepUpload">
-            <div class="step-header">
-                <span class="step-number">1</span>
-                <h2>Upload PDF</h2>
+    <!-- Universal Navbar -->
+    <nav class="site-navbar">
+        <div class="nav-container">
+            <a href="index.html" class="nav-brand">
+                <span class="brand-icon">📄</span>
+                <span>PDF Flow</span>
+                <span class="brand-badge">PRO</span>
+            </a>
+            <div class="nav-tabs">
+                <a href="index.html" class="nav-tab">📄 PDF Merger</a>
+                <a href="image-to-pdf.html" class="nav-tab">🖼️ Gambar ke PDF</a>
+                <a href="signature.html" class="nav-tab active">✍️ Tanda Tangan</a>
             </div>
-            <div class="upload-area" id="dropZone">
-                <div class="upload-icon">📄</div>
-                <p class="upload-title">Drag & Drop PDF di sini</p>
-                <p class="upload-sub">atau</p>
-                <input type="file" id="pdfInput" accept=".pdf" hidden>
-                <div class="upload-btn-group">
-                    <button class="btn btn-primary" onclick="document.getElementById('pdfInput').click()">
-                        Pilih File PDF
-                    </button>
-                    <button class="btn-gdrive" onclick="pickPDFFromGDrive()">
-                        <svg viewBox="0 0 87.3 78" xmlns="http://www.w3.org/2000/svg"><path d="m6.6 66.85 3.85 6.65c.8 1.4 1.95 2.5 3.3 3.3l13.75-23.8h-27.5c0 1.55.4 3.1 1.2 4.5z" fill="#0066da"/><path d="m43.65 25-13.75-23.8c-1.35.8-2.5 1.9-3.3 3.3l-25.4 44c-.8 1.4-1.2 2.95-1.2 4.5h27.5z" fill="#00ac47"/><path d="m73.55 76.8c1.35-.8 2.5-1.9 3.3-3.3l1.6-2.75 7.65-13.25c.8-1.4 1.2-2.95 1.2-4.5h-27.502l5.852 11.5z" fill="#ea4335"/><path d="m43.65 25 13.75-23.8c-1.35-.8-2.9-1.2-4.5-1.2h-18.5c-1.6 0-3.15.45-4.5 1.2z" fill="#00832d"/><path d="m59.8 53h-32.3l-13.75 23.8c1.35.8 2.9 1.2 4.5 1.2h50.8c1.6 0 3.15-.45 4.5-1.2z" fill="#2684fc"/><path d="m73.4 26.5-12.7-22c-.8-1.4-1.95-2.5-3.3-3.3l-13.75 23.8 16.15 28h27.45c0-1.55-.4-3.1-1.2-4.5z" fill="#ffba00"/></svg>
-                        Google Drive
-                    </button>
-                </div>
-            </div>
-            <div id="uploadedFile" class="uploaded-file hidden">
-                <span id="uploadedFileName">📄</span>
-                <button class="btn btn-danger-outline btn-sm" onclick="clearPDF()">❌ Hapus</button>
+            <div class="nav-actions">
+                <span class="security-badge">🔒 100% In-Browser</span>
+                <button class="theme-toggle-btn" onclick="toggleTheme()" aria-label="Toggle Theme">
+                    <span class="theme-icon">🌙</span><span class="theme-label">Dark</span>
+                </button>
             </div>
         </div>
+    </nav>
 
-        <!-- STEP 2: Pilih Halaman -->
-        <div class="step-card step-disabled" id="stepPage">
-            <div class="step-header">
-                <span class="step-number">2</span>
-                <h2>Pilih Halaman yang Ditandatangani</h2>
-            </div>
-            <div id="pageSelector" class="page-selector">
-                <p class="placeholder-text">Upload PDF terlebih dahulu</p>
-            </div>
-        </div>
+    <!-- Main Container -->
+    <main class="main-wrapper">
+        <div class="container sig-container">
 
-        <!-- STEP 3: Buat Tanda Tangan -->
-        <div class="step-card step-disabled" id="stepSign">
-            <div class="step-header">
-                <span class="step-number">3</span>
-                <h2>Buat Tanda Tangan</h2>
+            <!-- Header -->
+            <div class="header">
+                <h1>✍️ Studio Tanda Tangan PDF</h1>
+                <p>Tambahkan tanda tangan digital ke dokumen PDF Anda — cepat, presisi, dan aman.<br>File <strong>tidak dikirim ke server</strong>, seluruh proses diolah 100% di browser Anda.</p>
             </div>
 
-            <div class="tab-group">
-                <button class="tab-btn active" id="tabBtnDraw" onclick="switchTab('draw', this)">✏️ Gambar</button>
-                <button class="tab-btn" id="tabBtnType" onclick="switchTab('type', this)">⌨️ Ketik</button>
-                <button class="tab-btn" id="tabBtnUpload" onclick="switchTab('upload', this)">🖼️ Upload</button>
-            </div>
-
-            <!-- Tab: Gambar -->
-            <div class="tab-content active" id="tabDraw">
-                <div class="canvas-wrapper" id="canvasWrapper">
-                    <canvas id="signatureCanvas"></canvas>
-                    <p class="canvas-hint" id="canvasHint">Gambar tanda tangan Anda di sini</p>
-                </div>
-                <div class="canvas-controls">
-                    <label>Warna:</label>
-                    <input type="color" id="penColor" value="#000000">
-                    <label>Ukuran:</label>
-                    <input type="range" id="penSize" min="1" max="10" value="3">
-                    <span id="penSizeLabel">3px</span>
-                    <button class="btn btn-secondary btn-sm" onclick="clearCanvas()">🗑️ Hapus</button>
-                </div>
-            </div>
-
-            <!-- Tab: Ketik -->
-            <div class="tab-content" id="tabType">
-                <div class="type-wrapper">
-                    <input type="text" id="typeInput" class="type-text-input"
-                        placeholder="Ketik nama Anda..." oninput="updateTypeSignature()">
-                    <div class="type-options">
-                        <div class="option-row">
-                            <label>Font:</label>
-                            <select id="fontSelect" onchange="updateTypeSignature()">
-                                <option value="Dancing Script">Dancing Script</option>
-                                <option value="Pacifico">Pacifico</option>
-                                <option value="Great Vibes">Great Vibes</option>
-                                <option value="Sacramento">Sacramento</option>
-                            </select>
-                        </div>
-                        <div class="option-row">
-                            <label>Warna:</label>
-                            <input type="color" id="typeColor" value="#000000" oninput="updateTypeSignature()">
-                        </div>
-                    </div>
-                    <canvas id="typeCanvas"></canvas>
-                </div>
-            </div>
-
-            <!-- Tab: Upload -->
-            <div class="tab-content" id="tabUpload">
-                <div class="upload-sig-area" id="uploadSigArea"
-                    onclick="document.getElementById('sigImageInput').click()">
-                    <p>📁 Klik untuk upload gambar tanda tangan</p>
-                    <p class="upload-sig-hint">Format: PNG (transparan), JPG, GIF</p>
-                    <input type="file" id="sigImageInput" accept="image/*" hidden>
-                </div>
-                <canvas id="uploadCanvas" class="upload-preview-canvas hidden"></canvas>
-            </div>
-
-            <button class="btn btn-primary btn-full" id="useSignatureBtn"
-                onclick="useSignature()" disabled>
-                ✅ Gunakan Tanda Tangan Ini
-            </button>
-        </div>
-
-        <!-- STEP 4: Atur Posisi -->
-        <div class="step-card step-disabled" id="stepPosition">
-            <div class="step-header">
-                <span class="step-number">4</span>
-                <h2>Atur Posisi Tanda Tangan</h2>
-            </div>
-            <p class="hint-banner">💡 Klik & drag tanda tangan ke posisi yang diinginkan. Drag sudut kanan bawah untuk resize.</p>
-
-            <div class="sig-controls">
-                <label>Ukuran:</label>
-                <input type="range" id="sigSize" min="40" max="500" value="150"
-                    oninput="updateSigSize(this.value)">
-                <span id="sigSizeLabel">150px</span>
-                <button class="btn btn-secondary btn-sm" onclick="resetPosition()">↺ Reset</button>
-            </div>
-
-            <div class="preview-scroll-wrapper">
-                <div id="pdfPreviewContainer" class="pdf-preview-container">
-                    <canvas id="pdfPreviewCanvas"></canvas>
-                    <div id="signatureOverlay" class="sig-overlay hidden">
-                        <img id="signaturePreview" src="" alt="Tanda Tangan" draggable="false">
-                        <div class="resize-handle" id="resizeHandle"></div>
+            <!-- Upload Area (Shown when no PDF is loaded) -->
+            <div id="uploadView" class="sig-upload-view">
+                <div class="upload-area" id="dropZone">
+                    <div class="upload-icon">📄</div>
+                    <p class="upload-title">Drag & Drop file PDF di sini</p>
+                    <p class="upload-sub">atau pilih dari perangkat / Google Drive</p>
+                    <input type="file" id="pdfInput" accept=".pdf" hidden>
+                    <div class="upload-btn-group">
+                        <button class="btn btn-primary" onclick="document.getElementById('pdfInput').click()">
+                            Pilih Dokumen PDF
+                        </button>
+                        <button class="btn-gdrive" onclick="pickPDFFromGDrive()">
+                            <svg viewBox="0 0 87.3 78" xmlns="http://www.w3.org/2000/svg"><path d="m6.6 66.85 3.85 6.65c.8 1.4 1.95 2.5 3.3 3.3l13.75-23.8h-27.5c0 1.55.4 3.1 1.2 4.5z" fill="#0066da"/><path d="m43.65 25-13.75-23.8c-1.35.8-2.5 1.9-3.3 3.3l-25.4 44c-.8 1.4-1.2 2.95-1.2 4.5h27.5z" fill="#00ac47"/><path d="m73.55 76.8c1.35-.8 2.5-1.9 3.3-3.3l1.6-2.75 7.65-13.25c.8-1.4 1.2-2.95 1.2-4.5h-27.502l5.852 11.5z" fill="#ea4335"/><path d="m43.65 25 13.75-23.8c-1.35-.8-2.9-1.2-4.5-1.2h-18.5c-1.6 0-3.15.45-4.5 1.2z" fill="#00832d"/><path d="m59.8 53h-32.3l-13.75 23.8c1.35.8 2.9 1.2 4.5 1.2h50.8c1.6 0 3.15-.45 4.5-1.2z" fill="#2684fc"/><path d="m73.4 26.5-12.7-22c-.8-1.4-1.95-2.5-3.3-3.3l-13.75 23.8 16.15 28h27.45c0-1.55-.4-3.1-1.2-4.5z" fill="#ffba00"/></svg>
+                            Google Drive
+                        </button>
                     </div>
                 </div>
             </div>
 
-            <div class="pos-info-bar">
-                <span>X: <strong id="posX">50</strong>px</span>
-                <span>Y: <strong id="posY">50</strong>px</span>
-                <span>Lebar: <strong id="posW">150</strong>px</span>
-                <span>Halaman: <strong id="currentPageInfo">-</strong></span>
-            </div>
-        </div>
+            <!-- Studio 2-Column Layout (Shown when PDF is loaded) -->
+            <div id="studioView" class="sig-studio-layout hidden">
 
-        <!-- STEP 5: Download -->
-        <div class="step-card step-disabled" id="stepDownload">
-            <div class="step-header">
-                <span class="step-number">5</span>
-                <h2>Simpan PDF</h2>
-            </div>
-            <div class="output-section">
-                <label for="outputName">💾 Nama file output:</label>
-                <div class="output-input-row">
-                    <input type="text" id="outputName" class="output-input"
-                        value="signed_document" placeholder="nama_file">
-                    <span class="output-ext">.pdf</span>
+                <!-- Column 1: Document Viewport Panel (Left) -->
+                <div class="sig-viewport-panel">
+                    <div class="sig-viewport-toolbar">
+                        <div class="sig-page-nav">
+                            <button class="sig-page-btn" id="prevPageBtn" onclick="changePage(-1)" title="Halaman Sebelumnya">◀</button>
+                            <span>Halaman <strong id="curPageNum">1</strong> / <strong id="totalPageNum">1</strong></span>
+                            <button class="sig-page-btn" id="nextPageBtn" onclick="changePage(1)" title="Halaman Berikutnya">▶</button>
+                        </div>
+                        <div class="sig-zoom-controls">
+                            <span>Zoom:</span>
+                            <button class="sig-zoom-btn" onclick="zoomDoc(-0.1)" title="Zoom Out">−</button>
+                            <span class="sig-zoom-val" id="zoomVal">100%</span>
+                            <button class="sig-zoom-btn" onclick="zoomDoc(0.1)" title="Zoom In">+</button>
+                            <button class="sig-zoom-btn" onclick="zoomFit()" title="Fit to Screen">Fit</button>
+                        </div>
+                    </div>
+
+                    <div class="sig-canvas-scroll-wrap" id="canvasScrollWrap">
+                        <div id="pdfPreviewContainer" class="pdf-preview-container">
+                            <canvas id="pdfPreviewCanvas"></canvas>
+                            <div id="signatureOverlay" class="sig-overlay hidden">
+                                <img id="signaturePreview" src="" alt="Tanda Tangan" draggable="false">
+                                <div class="resize-handle" id="resizeHandle" title="Tarik untuk mengubah ukuran"></div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="sig-viewport-footer">
+                        <div class="sig-coords-info">
+                            <span>X: <strong id="posX">50</strong>px</span>
+                            <span>Y: <strong id="posY">50</strong>px</span>
+                            <span>Ukuran: <strong id="posW">150</strong>px</span>
+                        </div>
+                        <span style="font-size: 0.78rem;">💡 Drag tanda tangan & tarik sudut untuk resize</span>
+                    </div>
                 </div>
+
+                <!-- Column 2: Sidebar Tools Panel (Right) -->
+                <div class="sig-sidebar-panel">
+
+                    <!-- Document Summary -->
+                    <div class="sig-sidebar-card">
+                        <div class="sig-doc-info-row">
+                            <div class="sig-doc-meta">
+                                <div class="sig-doc-name" id="docName">document.pdf</div>
+                                <div class="sig-doc-sub" id="docMeta">1.2 MB · 5 Halaman</div>
+                            </div>
+                            <button class="btn btn-danger-outline btn-sm" onclick="clearPDF()">🔄 Ganti</button>
+                        </div>
+                    </div>
+
+                    <!-- Signature Creator Drawer -->
+                    <div class="sig-sidebar-card">
+                        <div class="sig-section-title">
+                            <span>✍️ Buat Tanda Tangan</span>
+                        </div>
+
+                        <div class="tab-group">
+                            <button class="tab-btn active" id="tabBtnDraw" onclick="switchTab('draw', this)">✏️ Gambar</button>
+                            <button class="tab-btn" id="tabBtnType" onclick="switchTab('type', this)">⌨️ Ketik</button>
+                            <button class="tab-btn" id="tabBtnUpload" onclick="switchTab('upload', this)">🖼️ Upload</button>
+                        </div>
+
+                        <!-- Tab: Gambar (Draw) -->
+                        <div class="tab-content active" id="tabDraw">
+                            <div class="canvas-wrapper" id="canvasWrapper">
+                                <canvas id="signatureCanvas"></canvas>
+                                <p class="canvas-hint" id="canvasHint">Tulis tanda tangan di sini</p>
+                            </div>
+                            <div class="canvas-controls">
+                                <label>Tinta:</label>
+                                <input type="color" id="penColor" value="#000000">
+                                <label>Tebal:</label>
+                                <input type="range" id="penSize" min="1" max="10" value="3" style="width: 70px;">
+                                <button class="btn btn-secondary-sm" onclick="clearCanvas()" style="margin-left: auto;">🗑️ Hapus</button>
+                            </div>
+                        </div>
+
+                        <!-- Tab: Ketik (Type) -->
+                        <div class="tab-content" id="tabType">
+                            <div class="type-wrapper">
+                                <input type="text" id="typeInput" class="type-text-input"
+                                    placeholder="Ketik nama Anda..." oninput="updateTypeSignature()">
+                                <div class="type-options">
+                                    <div class="option-row">
+                                        <select id="fontSelect" onchange="updateTypeSignature()">
+                                            <option value="Dancing Script">Dancing Script</option>
+                                            <option value="Pacifico">Pacifico</option>
+                                            <option value="Great Vibes">Great Vibes</option>
+                                            <option value="Sacramento">Sacramento</option>
+                                        </select>
+                                    </div>
+                                    <div class="option-row">
+                                        <input type="color" id="typeColor" value="#000000" oninput="updateTypeSignature()">
+                                    </div>
+                                </div>
+                                <canvas id="typeCanvas"></canvas>
+                            </div>
+                        </div>
+
+                        <!-- Tab: Upload -->
+                        <div class="tab-content" id="tabUpload">
+                            <div class="upload-sig-area" id="uploadSigArea" onclick="document.getElementById('sigImageInput').click()">
+                                <p>📁 Klik untuk upload foto tanda tangan</p>
+                                <p class="upload-sig-hint">PNG / JPG / WebP</p>
+                                <input type="file" id="sigImageInput" accept="image/*" hidden>
+                            </div>
+                            <canvas id="uploadCanvas" class="upload-preview-canvas hidden"></canvas>
+                            <button class="magic-btn-clean hidden" id="magicCleanBtn" onclick="autoCleanSignatureBackground()">
+                                ✨ Hapus Background Kertas Putih
+                            </button>
+                        </div>
+
+                        <button class="btn btn-primary btn-full" id="useSignatureBtn" onclick="useSignature()" disabled style="margin-top: 14px;">
+                            ✅ Pasang Tanda Tangan
+                        </button>
+                    </div>
+
+                    <!-- Signature Properties & Actions -->
+                    <div class="sig-sidebar-card">
+                        <div class="sig-section-title">
+                            <span>⚙️ Pengaturan Tanda Tangan</span>
+                            <button class="btn btn-secondary-sm" onclick="resetPosition()">↺ Reset</button>
+                        </div>
+                        <div class="sig-control-group">
+                            <div class="sig-control-row">
+                                <label for="sigSize">Ukuran:</label>
+                                <input type="range" id="sigSize" min="40" max="500" value="150" oninput="updateSigSize(this.value)">
+                                <span id="sigSizeLabel" style="font-size: 0.8rem; font-weight: 700; min-width: 40px;">150px</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Save & Download -->
+                    <div class="sig-sidebar-card">
+                        <div class="output-section" style="margin: 0 0 14px 0; padding: 12px 14px;">
+                            <label for="outputName">💾 Nama file output:</label>
+                            <div class="output-input-row">
+                                <input type="text" id="outputName" class="output-input" value="signed_document" placeholder="nama_file">
+                                <span class="output-ext">.pdf</span>
+                            </div>
+                        </div>
+                        <button class="btn btn-success btn-full btn-large" onclick="applySignatureAndDownload()">
+                            💾 Simpan & Download PDF
+                        </button>
+                        <div id="downloadStatus" class="status-box hidden"></div>
+                    </div>
+
+                </div>
+
             </div>
-            <button class="btn btn-success btn-full btn-large" onclick="applySignatureAndDownload()">
-                💾 Simpan & Download PDF
-            </button>
-            <div id="downloadStatus" class="status-box hidden"></div>
-        </div>
 
-        <!-- Footer -->
-        <div class="footer">
-            <p>🔒 100% Aman · 🆓 Gratis · ⚡ Cepat · Tidak perlu login</p>
-        </div>
+            <!-- Footer -->
+            <div class="footer">
+                <p>🔒 100% Aman · 🆓 Gratis · ⚡ Cepat · Tidak perlu login</p>
+            </div>
 
-    </div>
+        </div>
+    </main>
+
     <script src="gdrive-config.js?v=2"></script>
     <script src="gdrive-picker.js?v=2"></script>
     <script src="signature.js?v=2"></script>
