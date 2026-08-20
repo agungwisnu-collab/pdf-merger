@@ -93,7 +93,10 @@
         currentCategory = category;
         const pills = document.querySelectorAll('.category-pill');
         pills.forEach(p => p.classList.remove('active'));
-        if (btnElement) btnElement.classList.add('active');
+        if (btnElement) {
+            btnElement.classList.add('active');
+            btnElement.scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' });
+        }
         window.filterTools();
     };
 

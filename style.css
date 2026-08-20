@@ -2034,66 +2034,296 @@ body {
     background: var(--border-subtle);
 }
 
-/* ==================== RESPONSIVE ==================== */
+/* ==================== RESPONSIVE (MOBILE & TABLET) ==================== */
 @media (max-width: 768px) {
+    /* Navbar Mobile */
+    .site-navbar {
+        padding: 0;
+    }
+
     .nav-container {
         flex-wrap: wrap;
-        padding: 10px 16px;
+        padding: 8px 14px;
+        gap: 8px;
     }
 
     .nav-brand {
         order: 1;
+        font-size: 1.05rem;
+        gap: 8px;
+    }
+
+    .brand-icon {
+        width: 32px;
+        height: 32px;
+        font-size: 1rem;
+        border-radius: 8px;
     }
 
     .nav-actions {
         order: 2;
+        gap: 8px;
     }
 
     .security-badge {
         display: none;
     }
 
+    .theme-toggle-btn {
+        padding: 6px 10px;
+        font-size: 0.78rem;
+    }
+
     .nav-tabs {
         order: 3;
         width: 100%;
         overflow-x: auto;
+        flex-wrap: nowrap;
+        -webkit-overflow-scrolling: touch;
+        scrollbar-width: none;
         justify-content: flex-start;
-        padding: 4px;
+        padding: 3px;
+        gap: 4px;
+    }
+
+    .nav-tabs::-webkit-scrollbar {
+        display: none;
     }
 
     .nav-tab {
-        flex: 1;
-        text-align: center;
-        justify-content: center;
-        padding: 8px 10px;
-        font-size: 0.82rem;
+        flex-shrink: 0;
+        white-space: nowrap;
+        padding: 6px 12px;
+        font-size: 0.8rem;
     }
 
-    .container {
-        padding: 24px 18px;
-        border-radius: 16px;
-    }
-
-    .settings-grid {
-        grid-template-columns: 1fr;
-    }
-
-    .tools-hub-title {
-        font-size: 1.6rem;
-    }
-
-    .tools-hub-grid {
-        grid-template-columns: 1fr;
+    .nav-dropdown-btn {
+        padding: 6px 10px;
+        font-size: 0.8rem;
     }
 
     .nav-dropdown-menu {
         width: min(calc(100vw - 24px), 360px);
-        right: -10px;
+        right: -8px;
+        padding: 12px;
+        max-height: 75vh;
     }
 
     .mega-menu-grid {
         grid-template-columns: 1fr;
+        gap: 12px;
+    }
+
+    .mega-menu-item {
+        padding: 6px 8px;
+    }
+
+    /* Main Container Mobile */
+    .main-wrapper {
+        padding: 16px 12px 48px 12px;
+    }
+
+    .container {
+        padding: 20px 16px;
+        border-radius: 16px;
+    }
+
+    /* Hero Section Mobile */
+    .tools-hub-hero {
+        margin-bottom: 18px;
+    }
+
+    .hero-badge-pill {
+        font-size: 0.72rem;
+        padding: 4px 12px;
+        margin-bottom: 10px;
+        gap: 6px;
+    }
+
+    .tools-hub-title {
+        font-size: 1.45rem;
+        letter-spacing: -0.02em;
+        line-height: 1.25;
+        margin-bottom: 8px;
+    }
+
+    .tools-hub-desc {
+        font-size: 0.84rem;
+        line-height: 1.5;
+        margin: 0 auto 16px auto;
+        padding: 0 6px;
+    }
+
+    /* Search Bar Mobile */
+    .search-bar-wrap {
+        margin-bottom: 14px;
+    }
+
+    .search-input-field {
+        padding: 12px 44px 12px 42px;
+        font-size: 0.88rem;
+        border-radius: 14px;
+    }
+
+    .search-icon-left {
+        left: 14px;
+        font-size: 1.05rem;
+    }
+
+    .search-key-badge {
+        display: none; /* Keyboard shortcut not needed on touch screens */
+    }
+
+    /* Quick Tags Mobile */
+    .quick-tags-wrap {
+        gap: 6px;
+        margin-top: -6px;
+        margin-bottom: 18px;
+    }
+
+    .quick-tag-label {
+        display: none;
+    }
+
+    .quick-tag-btn {
+        padding: 4px 10px;
+        font-size: 0.74rem;
+        border-radius: 16px;
+    }
+
+    /* Value Props Mobile (Compact 2x2 Mini Grid - Dramatically Reduces Scroll) */
+    .features-value-grid {
+        grid-template-columns: repeat(2, 1fr);
+        gap: 8px;
+        margin-bottom: 20px;
+    }
+
+    .value-card {
+        padding: 10px 12px;
+        border-radius: 12px;
+        gap: 8px;
+        align-items: center;
+    }
+
+    .value-icon {
+        font-size: 1.3rem;
+        margin-top: 0;
+    }
+
+    .value-title {
+        font-size: 0.78rem;
+        margin-bottom: 0;
+        line-height: 1.25;
+    }
+
+    .value-desc {
+        display: none; /* Hide verbose text on mobile so tools are visible immediately */
+    }
+
+    /* Sticky Category Nav Mobile (Single Horizontal Swipe Bar, No Wrapping/Overlapping) */
+    .category-filter-nav {
+        display: flex;
+        flex-wrap: nowrap;
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+        scrollbar-width: none;
+        justify-content: flex-start;
+        gap: 6px;
+        padding: 6px 8px;
+        margin-bottom: 22px;
+        top: 56px;
+        width: 100% !important;
+        max-width: 100% !important;
+        border-radius: 14px;
+        background: var(--bg-glass);
+    }
+
+    .category-filter-nav::-webkit-scrollbar {
+        display: none;
+    }
+
+    .category-pill {
+        flex-shrink: 0;
+        white-space: nowrap;
+        padding: 6px 14px;
+        font-size: 0.78rem;
+        border-radius: 14px;
+    }
+
+    /* Category Section Headers Mobile */
+    .category-section {
+        margin-bottom: 28px;
+        scroll-margin-top: 100px;
+    }
+
+    .cat-sec-header {
+        margin-bottom: 12px;
+        padding-bottom: 8px;
+        gap: 8px;
+    }
+
+    .cat-sec-title {
+        font-size: 1.12rem;
+        gap: 6px;
+    }
+
+    .cat-sec-tag {
+        font-size: 0.68rem;
+        padding: 2px 7px;
+    }
+
+    .cat-sec-desc {
+        font-size: 0.78rem;
+        line-height: 1.4;
+    }
+
+    /* Tools Grid Mobile (2-Column Compact Layout for Fast Scanning) */
+    .tools-hub-grid {
+        grid-template-columns: repeat(2, 1fr);
         gap: 10px;
+    }
+
+    .hub-tool-card {
+        padding: 12px 12px 14px 12px;
+        border-radius: 14px;
+        min-height: 135px;
+    }
+
+    .hub-card-header {
+        margin-bottom: 8px;
+    }
+
+    .hub-card-icon {
+        width: 34px;
+        height: 34px;
+        font-size: 1.15rem;
+        border-radius: 9px;
+    }
+
+    .hub-card-badge {
+        font-size: 0.58rem;
+        padding: 2px 5px;
+    }
+
+    .hub-card-title {
+        font-size: 0.88rem;
+        margin-bottom: 4px;
+        line-height: 1.25;
+    }
+
+    .hub-card-desc {
+        font-size: 0.72rem;
+        line-height: 1.35;
+        margin-bottom: 8px;
+        -webkit-line-clamp: 2;
+    }
+
+    .hub-card-footer {
+        font-size: 0.74rem;
+    }
+
+    .settings-grid {
+        grid-template-columns: 1fr;
     }
 }
 
