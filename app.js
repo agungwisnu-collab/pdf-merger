@@ -456,8 +456,9 @@ async function mergeAndSaveToGDrive() {
             onProgress: (p, text) => showProgress(p, text),
             onSuccess: (res) => {
                 showProgress(100, 'Selesai!');
+                const loc = res.folderName ? `di folder <strong>"${res.folderName}"</strong>` : 'di Google Drive Anda';
                 showStatus(
-                    `✅ Dokumen <strong>"${res.name}"</strong> berhasil disimpan di Google Drive Anda! <a href="${res.webViewLink}" target="_blank" rel="noopener" style="color: var(--primary); text-decoration: underline; margin-left: 8px; font-weight: 700;">🔗 Buka File di Google Drive</a>`,
+                    `✅ Dokumen <strong>"${res.name}"</strong> berhasil disimpan ${loc}! <a href="${res.webViewLink}" target="_blank" rel="noopener" style="color: var(--primary); text-decoration: underline; margin-left: 8px; font-weight: 700;">🔗 Buka File di Google Drive</a>`,
                     'success'
                 );
             },

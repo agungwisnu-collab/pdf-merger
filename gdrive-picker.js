@@ -310,15 +310,115 @@ function closeGDriveConfigModal() {
     if (modal) modal.classList.add('hidden');
 }
 
+// ─── Destination Modal (Pilih Root atau Folder) ───────────────
+function showGDriveDestinationModal(filename, onSelect) {
+    let modal = document.getElementById('gdriveDestModal');
+    if (!modal) {
+        modal = document.createElement('div');
+        modal.id = 'gdriveDestModal';
+        modal.className = 'gdrive-modal-backdrop';
+        modal.innerHTML = `
+            <div class="gdrive-modal-card" style="max-width: 480px;">
+                <div class="gdrive-modal-header">
+                    <div class="gdrive-modal-title" style="display: flex; align-items: center; gap: 8px;">
+                        <svg viewBox="0 0 87.3 78" style="width: 22px; height: 20px;" xmlns="http://www.w3.org/2000/svg"><path d="m6.6 66.85 3.85 6.65c.8 1.4 1.95 2.5 3.3 3.3l13.75-23.8h-27.5c0 1.55.4 3.1 1.2 4.5z" fill="#0066da"/><path d="m43.65 25-13.75-23.8c-1.35.8-2.5 1.9-3.3 3.3l-25.4 44c-.8 1.4-1.2 2.95-1.2 4.5h27.5z" fill="#00ac47"/><path d="m73.55 76.8c1.35-.8 2.5-1.9 3.3-3.3l1.6-2.75 7.65-13.25c.8-1.4 1.2-2.95 1.2-4.5h-27.502l5.852 11.5z" fill="#ea4335"/><path d="m43.65 25 13.75-23.8c-1.35-.8-2.9-1.2-4.5-1.2h-18.5c-1.6 0-3.15.45-4.5 1.2z" fill="#00832d"/><path d="m59.8 53h-32.3l-13.75 23.8c1.35.8 2.9 1.2 4.5 1.2h50.8c1.6 0 3.15-.45 4.5-1.2z" fill="#2684fc"/><path d="m73.4 26.5-12.7-22c-.8-1.4-1.95-2.5-3.3-3.3l-13.75 23.8 16.15 28h27.45c0-1.55-.4-3.1-1.2-4.5z" fill="#ffba00"/></svg>
+                        <span>Simpan ke Google Drive</span>
+                    </div>
+                    <button class="gdrive-modal-close" onclick="closeGDriveDestModal()">✕</button>
+                </div>
+                <div class="gdrive-modal-body">
+                    <p style="font-size: 0.9rem; color: var(--text-main); margin-bottom: 4px;">
+                        File <strong id="gdriveDestFilename" style="color: var(--primary);">document.pdf</strong> siap disimpan.
+                    </p>
+                    <p style="font-size: 0.85rem; color: var(--text-subtle); margin-bottom: 12px;">
+                        Pilih lokasi tujuan penyimpanan di Google Drive Anda:
+                    </p>
+                    <div class="gdrive-dest-options">
+                        <button class="gdrive-dest-card" id="destRootOption">
+                            <span style="font-size: 1.8rem;">🏠</span>
+                            <div>
+                                <div style="font-weight: 700; font-size: 0.95rem; color: var(--text-main);">Drive Saya (Halaman Utama)</div>
+                                <div style="font-size: 0.8rem; color: var(--text-muted);">Simpan langsung di root folder utama Google Drive</div>
+                            </div>
+                        </button>
+                        <button class="gdrive-dest-card" id="destFolderOption">
+                            <span style="font-size: 1.8rem;">📂</span>
+                            <div>
+                                <div style="font-weight: 700; font-size: 0.95rem; color: var(--text-main);">Pilih Folder Tertentu...</div>
+                                <div style="font-size: 0.8rem; color: var(--text-muted);">Buka penjelajah folder untuk memilih folder tujuan</div>
+                            </div>
+                        </button>
+                    </div>
+                </div>
+                <div class="gdrive-modal-footer">
+                    <button class="btn btn-secondary-sm" onclick="closeGDriveDestModal()">Batal</button>
+                </div>
+            </div>
+        `;
+        document.body.appendChild(modal);
+    }
+
+    document.getElementById('gdriveDestFilename').textContent = filename;
+    modal.classList.remove('hidden');
+
+    document.getElementById('destRootOption').onclick = () => {
+        closeGDriveDestModal();
+        onSelect({ type: 'root' });
+    };
+
+    document.getElementById('destFolderOption').onclick = () => {
+        closeGDriveDestModal();
+        onSelect({ type: 'folder' });
+    };
+}
+
+function closeGDriveDestModal() {
+    const modal = document.getElementById('gdriveDestModal');
+    if (modal) modal.classList.add('hidden');
+    hideGDriveLoading();
+}
+
+// ─── Buka Google Picker untuk Memilih Folder ───────────────────
+function openGDriveFolderPicker(token, config, onFolderSelected, onCancel) {
+    const docsView = new google.picker.DocsView(google.picker.ViewId.FOLDERS)
+        .setIncludeFolders(true)
+        .setSelectFolderEnabled(true)
+        .setMimeTypes('application/vnd.google-apps.folder');
+
+    const appId = (/^\d+$/.test(config.APP_ID) ? config.APP_ID : config.CLIENT_ID?.split('-')[0]) || '';
+
+    const builder = new google.picker.PickerBuilder()
+        .enableFeature(google.picker.Feature.NAV_HIDDEN)
+        .setAppId(appId)
+        .setOAuthToken(token)
+        .addView(docsView)
+        .setDeveloperKey(config.API_KEY)
+        .setLocale('id')
+        .setTitle('Pilih Folder Tujuan Penyimpanan')
+        .setOrigin(window.location.protocol + '//' + window.location.host)
+        .setCallback((data) => {
+            if (data.action === google.picker.Action.PICKED) {
+                const doc = data.docs?.[0];
+                if (doc) onFolderSelected({ id: doc.id, name: doc.name });
+            } else if (data.action === google.picker.Action.CANCEL) {
+                if (onCancel) onCancel();
+                hideGDriveLoading();
+            }
+        });
+
+    const picker = builder.build();
+    picker.setVisible(true);
+}
+
 // ─── Upload File Blob ke Google Drive via REST API v3 ──────────
 /**
- * Upload file Blob langsung ke Google Drive pengguna
+ * Upload file Blob langsung ke Google Drive pengguna dengan opsi pemilihan folder
  * @param {Object} options
  * @param {Blob} options.blob - File Blob yang akan diupload
  * @param {string} options.filename - Nama file di Google Drive
  * @param {string} options.mimeType - Tipe MIME file (default: 'application/pdf')
  * @param {Function} options.onProgress - Callback progres upload (persen, teks)
- * @param {Function} options.onSuccess - Callback sukses ({ id, name, webViewLink })
+ * @param {Function} options.onSuccess - Callback sukses ({ id, name, webViewLink, folderName })
  * @param {Function} options.onError - Callback gagal (error)
  */
 async function uploadBlobToGDrive(options = {}) {
@@ -336,92 +436,114 @@ async function uploadBlobToGDrive(options = {}) {
         return;
     }
 
-    if (onProgress) onProgress(10, 'Menghubungkan ke Google Drive...');
-    showGDriveLoading('Menghubungkan ke Google Drive...');
+    // Tampilkan dialog pilihan folder penyimpanan (Root atau Folder Tertentu)
+    showGDriveDestinationModal(filename, async (destChoice) => {
+        if (onProgress) onProgress(10, 'Menghubungkan ke Google Drive...');
+        showGDriveLoading('Menghubungkan ke Google Drive...');
 
-    try {
-        await loadGoogleScripts();
+        try {
+            await loadGoogleScripts();
 
-        const doUpload = async (token) => {
-            try {
-                if (onProgress) onProgress(30, 'Mengunggah file ke Google Drive...');
-                showGDriveLoading(`Mengunggah "${filename}" ke Google Drive...`);
+            const executeUpload = async (token, folderId = null, folderName = null) => {
+                try {
+                    const targetDesc = folderName ? `ke folder "${folderName}"` : 'ke Drive Saya';
+                    if (onProgress) onProgress(30, `Mengunggah ${targetDesc}...`);
+                    showGDriveLoading(`Mengunggah "${filename}" ${targetDesc}...`);
 
-                const metadata = {
-                    name: filename,
-                    mimeType: mimeType,
-                };
+                    const metadata = {
+                        name: filename,
+                        mimeType: mimeType,
+                    };
 
-                const boundary = '-------314159265358979323846';
-                const delimiter = "\r\n--" + boundary + "\r\n";
-                const close_delim = "\r\n--" + boundary + "--";
+                    if (folderId) {
+                        metadata.parents = [folderId];
+                    }
 
-                const metadataPart = delimiter +
-                    'Content-Type: application/json; charset=UTF-8\r\n\r\n' +
-                    JSON.stringify(metadata);
+                    const boundary = '-------314159265358979323846';
+                    const delimiter = "\r\n--" + boundary + "\r\n";
+                    const close_delim = "\r\n--" + boundary + "--";
 
-                const arrayBuffer = await blob.arrayBuffer();
-                const uint8Array = new Uint8Array(arrayBuffer);
+                    const metadataPart = delimiter +
+                        'Content-Type: application/json; charset=UTF-8\r\n\r\n' +
+                        JSON.stringify(metadata);
 
-                const mediaHeader = delimiter +
-                    'Content-Type: ' + mimeType + '\r\n\r\n';
+                    const arrayBuffer = await blob.arrayBuffer();
+                    const uint8Array = new Uint8Array(arrayBuffer);
 
-                const enc = new TextEncoder();
-                const part1 = enc.encode(metadataPart);
-                const part2 = enc.encode(mediaHeader);
-                const part4 = enc.encode(close_delim);
+                    const mediaHeader = delimiter +
+                        'Content-Type: ' + mimeType + '\r\n\r\n';
 
-                const combinedLength = part1.length + part2.length + uint8Array.length + part4.length;
-                const combinedBody = new Uint8Array(combinedLength);
+                    const enc = new TextEncoder();
+                    const part1 = enc.encode(metadataPart);
+                    const part2 = enc.encode(mediaHeader);
+                    const part4 = enc.encode(close_delim);
 
-                let offset = 0;
-                combinedBody.set(part1, offset); offset += part1.length;
-                combinedBody.set(part2, offset); offset += part2.length;
-                combinedBody.set(uint8Array, offset); offset += uint8Array.length;
-                combinedBody.set(part4, offset);
+                    const combinedLength = part1.length + part2.length + uint8Array.length + part4.length;
+                    const combinedBody = new Uint8Array(combinedLength);
 
-                const response = await fetch('https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart&fields=id,name,webViewLink', {
-                    method: 'POST',
-                    headers: {
-                        Authorization: `Bearer ${token}`,
-                        'Content-Type': 'multipart/related; boundary="' + boundary + '"',
-                    },
-                    body: combinedBody,
-                });
+                    let offset = 0;
+                    combinedBody.set(part1, offset); offset += part1.length;
+                    combinedBody.set(part2, offset); offset += part2.length;
+                    combinedBody.set(uint8Array, offset); offset += uint8Array.length;
+                    combinedBody.set(part4, offset);
 
-                if (!response.ok) {
-                    const errData = await response.json().catch(() => ({}));
-                    throw new Error(errData.error?.message || `HTTP ${response.status}: Gagal mengunggah file`);
+                    const response = await fetch('https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart&fields=id,name,webViewLink', {
+                        method: 'POST',
+                        headers: {
+                            Authorization: `Bearer ${token}`,
+                            'Content-Type': 'multipart/related; boundary="' + boundary + '"',
+                        },
+                        body: combinedBody,
+                    });
+
+                    if (!response.ok) {
+                        const errData = await response.json().catch(() => ({}));
+                        throw new Error(errData.error?.message || `HTTP ${response.status}: Gagal mengunggah file`);
+                    }
+
+                    const result = await response.json();
+                    result.folderName = folderName;
+                    hideGDriveLoading();
+                    if (onProgress) onProgress(100, 'Selesai diunggah ke Google Drive!');
+                    if (onSuccess) onSuccess(result);
+                    else {
+                        alert(`✅ Berhasil disimpan ke Google Drive: ${result.name}`);
+                    }
+                } catch (uploadErr) {
+                    hideGDriveLoading();
+                    console.error('Error saat upload ke GDrive:', uploadErr);
+                    if (onError) onError(uploadErr);
+                    else alert('Gagal mengunggah ke Google Drive: ' + uploadErr.message);
                 }
+            };
 
-                const result = await response.json();
-                hideGDriveLoading();
-                if (onProgress) onProgress(100, 'Selesai diunggah ke Google Drive!');
-                if (onSuccess) onSuccess(result);
-                else {
-                    alert(`✅ Berhasil disimpan ke Google Drive: ${result.name}`);
+            const handleTokenReady = (token) => {
+                if (destChoice.type === 'folder') {
+                    hideGDriveLoading();
+                    openGDriveFolderPicker(token, config, (folder) => {
+                        executeUpload(token, folder.id, folder.name);
+                    }, () => {
+                        if (onProgress) onProgress(0, '');
+                    });
+                } else {
+                    executeUpload(token, null, null);
                 }
-            } catch (uploadErr) {
-                hideGDriveLoading();
-                console.error('Error saat upload ke GDrive:', uploadErr);
-                if (onError) onError(uploadErr);
-                else alert('Gagal mengunggah ke Google Drive: ' + uploadErr.message);
+            };
+
+            initTokenClient(config, (token) => {
+                handleTokenReady(token);
+            });
+
+            if (!gdriveAccessToken) {
+                gdriveTokenClient.requestAccessToken({ prompt: '' });
+            } else {
+                handleTokenReady(gdriveAccessToken);
             }
-        };
-
-        initTokenClient(config, (token) => {
-            doUpload(token);
-        });
-
-        if (!gdriveAccessToken) {
-            gdriveTokenClient.requestAccessToken({ prompt: '' });
-        } else {
-            doUpload(gdriveAccessToken);
+        } catch (err) {
+            hideGDriveLoading();
+            if (onError) onError(err);
+            else alert('Error Google Drive: ' + err.message);
         }
-    } catch (err) {
-        hideGDriveLoading();
-        if (onError) onError(err);
-        else alert('Error Google Drive: ' + err.message);
-    }
+    });
 }
 

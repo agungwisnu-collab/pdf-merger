@@ -85,7 +85,60 @@ function setSplitMode(mode) {
     document.getElementById('modeRangeCard').classList.toggle('active', mode === 'range');
     document.getElementById('modeAllCard').classList.toggle('active', mode === 'all');
     document.getElementById('rangeInputPanel').classList.toggle('hidden', mode === 'all');
-    document.getElementById('outputExt').textContent = mode === 'range' ? '.pdf' : '.zip';
+    document.getElementById('formatOptionPanel').classList.toggle('hidden', mode === 'range');
+
+    const format = document.getElementById('splitFormat').value;
+    updateSplitBtnLabels(mode, format);
+}
+
+function onSplitFormatChange(format) {
+    updateSplitBtnLabels(splitMode, format);
+}
+
+function updateSplitBtnLabels(mode, format) {
+    const splitBtn = document.getElementById('splitBtn');
+    const extSpan  = document.getElementById('outputExt');
+
+    if (mode === 'range') {
+        extSpan.textContent = '.pdf';
+        splitBtn.textContent = '✂️ Pisahkan & Download PDF';
+    } else {
+        if (format === 'zip') {
+            extSpan.textContent = '.zip';
+            splitBtn.textContent = '📦 Pisahkan & Download (.ZIP)';
+        } else {
+            extSpan.textContent = '.pdf';
+            splitBtn.textContent = '📑 Download Semua Halaman Satuan (.PDF)';
+        }
+    }
+}
+
+// ─── Quick Single Page PDF Download ────────────────────────────
+async function downloadSinglePagePdf(pageIndex) {
+    if (!pdfFile) return;
+
+    showProgress(20, `Mengekstrak halaman ${pageIndex}...`);
+    try {
+        const { PDFDocument } = PDFLib;
+        const arrayBuf = await pdfFile.arrayBuffer();
+        const srcDoc = await PDFDocument.load(arrayBuf);
+
+        const singleDoc = await PDFDocument.create();
+        const [copied] = await singleDoc.copyPages(srcDoc, [pageIndex - 1]);
+        singleDoc.addPage(copied);
+
+        const pdfBytes = await singleDoc.save();
+        const blob = new Blob([pdfBytes], { type: 'application/pdf' });
+        const baseName = pdfFile.name.replace(/\.pdf$/i, '');
+        const filename = `${baseName}_halaman_${pageIndex}.pdf`;
+
+        downloadBlob(blob, filename);
+        showProgress(100, 'Selesai!');
+        showStatus(`✅ Halaman ${pageIndex} berhasil diunduh sebagai "${filename}".`, 'success');
+    } catch (err) {
+        hideProgress();
+        showStatus('❌ Gagal mengunduh halaman: ' + err.message, 'error');
+    }
 }
 
 // ─── Render Page Thumbnails ────────────────────────────────────
@@ -110,9 +163,12 @@ async function renderPageThumbnails() {
             <div class="doc-page-thumb-wrap">
                 <img src="${canvas.toDataURL('image/jpeg', 0.8)}" class="doc-page-thumb" alt="Hal ${i}">
             </div>
-            <div class="doc-page-footer">
-                <span>Hal. ${i}</span>
-                <input type="checkbox" ${selectedPages.has(i) ? 'checked' : ''} onclick="event.stopPropagation(); togglePageSelect(${i})">
+            <div class="doc-page-footer" style="display: flex; justify-content: space-between; align-items: center; width: 100%;">
+                <span style="font-size: 0.8rem; font-weight: 700;">Hal. ${i}</span>
+                <div style="display: flex; align-items: center; gap: 6px;">
+                    <button class="btn btn-secondary-sm" style="padding: 2px 7px; font-size: 0.72rem;" title="Download halaman ${i} saja" onclick="event.stopPropagation(); downloadSinglePagePdf(${i})">⬇️ PDF</button>
+                    <input type="checkbox" ${selectedPages.has(i) ? 'checked' : ''} onclick="event.stopPropagation(); togglePageSelect(${i})">
+                </div>
             </div>
         `;
         grid.appendChild(card);
@@ -234,27 +290,48 @@ async function processSplit() {
             showProgress(100, 'Selesai!');
             showStatus(`✅ Berhasil! ${selectedPages.size} halaman diekstrak ke "${rawName}.pdf".`, 'success');
         } else {
-            // Mode B: Pisahkan setiap halaman menjadi file PDF tersendiri & ZIP
-            const zip = new JSZip();
+            // Mode B: Pisahkan setiap halaman
+            const format = document.getElementById('splitFormat').value;
             const total = srcDoc.getPageCount();
 
-            for (let i = 0; i < total; i++) {
-                const pct = Math.round(10 + (i / total) * 75);
-                showProgress(pct, `Mengekstrak halaman ${i + 1} dari ${total}...`);
+            if (format === 'zip') {
+                const zip = new JSZip();
+                for (let i = 0; i < total; i++) {
+                    const pct = Math.round(10 + (i / total) * 75);
+                    showProgress(pct, `Mengekstrak halaman ${i + 1} dari ${total}...`);
 
-                const singleDoc = await PDFDocument.create();
-                const [copied] = await singleDoc.copyPages(srcDoc, [i]);
-                singleDoc.addPage(copied);
-                const singleBytes = await singleDoc.save();
-                zip.file(`halaman_${i + 1}.pdf`, singleBytes);
+                    const singleDoc = await PDFDocument.create();
+                    const [copied] = await singleDoc.copyPages(srcDoc, [i]);
+                    singleDoc.addPage(copied);
+                    const singleBytes = await singleDoc.save();
+                    zip.file(`${rawName}_halaman_${i + 1}.pdf`, singleBytes);
+                }
+
+                showProgress(90, 'Mengompresi file ke format ZIP...');
+                const zipBlob = await zip.generateAsync({ type: 'blob' });
+                downloadBlob(zipBlob, `${rawName}.zip`);
+
+                showProgress(100, 'Selesai!');
+                showStatus(`✅ Berhasil! Seluruh ${total} halaman dipisah & diunduh sebagai "${rawName}.zip".`, 'success');
+            } else {
+                // Mode Single: Download each page individually with a tiny pause
+                for (let i = 0; i < total; i++) {
+                    const pct = Math.round(10 + (i / total) * 80);
+                    showProgress(pct, `Mengunduh lembar ${i + 1} dari ${total}...`);
+
+                    const singleDoc = await PDFDocument.create();
+                    const [copied] = await singleDoc.copyPages(srcDoc, [i]);
+                    singleDoc.addPage(copied);
+                    const singleBytes = await singleDoc.save();
+                    const singleBlob = new Blob([singleBytes], { type: 'application/pdf' });
+                    downloadBlob(singleBlob, `${rawName}_halaman_${i + 1}.pdf`);
+
+                    await new Promise(r => setTimeout(r, 250));
+                }
+
+                showProgress(100, 'Selesai!');
+                showStatus(`✅ Berhasil! Seluruh ${total} file PDF satuan per lembar telah diunduh.`, 'success');
             }
-
-            showProgress(90, 'Mengompresi file ke format ZIP...');
-            const zipBlob = await zip.generateAsync({ type: 'blob' });
-            downloadBlob(zipBlob, `${rawName}.zip`);
-
-            showProgress(100, 'Selesai!');
-            showStatus(`✅ Berhasil! Seluruh ${total} halaman dipisah & diunduh sebagai "${rawName}.zip".`, 'success');
         }
     } catch (err) {
         hideProgress();
@@ -303,8 +380,9 @@ async function splitAndSaveToGDrive() {
                 onProgress: showProgress,
                 onSuccess: (res) => {
                     showProgress(100, 'Selesai!');
+                    const loc = res.folderName ? `di folder <strong>"${res.folderName}"</strong>` : 'di Google Drive Anda';
                     showStatus(
-                        `✅ File <strong>"${res.name}"</strong> berhasil disimpan di Google Drive! <a href="${res.webViewLink}" target="_blank" rel="noopener" style="color: var(--primary); text-decoration: underline; margin-left: 8px; font-weight: 700;">🔗 Buka di Google Drive</a>`,
+                        `✅ File <strong>"${res.name}"</strong> berhasil disimpan ${loc}! <a href="${res.webViewLink}" target="_blank" rel="noopener" style="color: var(--primary); text-decoration: underline; margin-left: 8px; font-weight: 700;">🔗 Buka di Google Drive</a>`,
                         'success'
                     );
                 },
@@ -337,8 +415,9 @@ async function splitAndSaveToGDrive() {
                 onProgress: showProgress,
                 onSuccess: (res) => {
                     showProgress(100, 'Selesai!');
+                    const loc = res.folderName ? `di folder <strong>"${res.folderName}"</strong>` : 'di Google Drive Anda';
                     showStatus(
-                        `✅ Arsip <strong>"${res.name}"</strong> berhasil disimpan di Google Drive! <a href="${res.webViewLink}" target="_blank" rel="noopener" style="color: var(--primary); text-decoration: underline; margin-left: 8px; font-weight: 700;">🔗 Buka di Google Drive</a>`,
+                        `✅ Arsip <strong>"${res.name}"</strong> berhasil disimpan ${loc}! <a href="${res.webViewLink}" target="_blank" rel="noopener" style="color: var(--primary); text-decoration: underline; margin-left: 8px; font-weight: 700;">🔗 Buka di Google Drive</a>`,
                         'success'
                     );
                 },
@@ -380,7 +459,7 @@ function hideProgress() {
 
 function showStatus(msg, type) {
     const box = document.getElementById('statusBox');
-    box.textContent = msg;
+    box.innerHTML = msg;
     box.className = `status-box ${type}`;
     box.classList.remove('hidden');
 }

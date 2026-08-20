@@ -155,6 +155,15 @@
                     <p id="rangeStatus" class="page-status" style="margin-top: 6px;">💡 Klik halaman di bawah untuk memilih secara visual</p>
                 </div>
 
+                <!-- Format Option Panel for Mode All -->
+                <div id="formatOptionPanel" class="output-section hidden" style="margin-top: 10px;">
+                    <label for="splitFormat">📦 Pilihan Format Output:</label>
+                    <select id="splitFormat" class="setting-select" onchange="onSplitFormatChange(this.value)">
+                        <option value="zip" selected>📦 Arsip ZIP (Seluruh lembar dikemas dalam 1 file .zip)</option>
+                        <option value="single">📑 File Satuan per Halaman (.pdf per lembar)</option>
+                    </select>
+                </div>
+
                 <!-- Visual Page Grid Gallery -->
                 <div id="pageGrid" class="doc-page-grid"></div>
 

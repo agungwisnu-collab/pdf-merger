@@ -263,7 +263,7 @@ function hideProgress() {
 
 function showStatus(msg, type) {
     const box = document.getElementById('statusBox');
-    box.textContent = msg;
+    box.innerHTML = msg;
     box.className = `status-box ${type}`;
     box.classList.remove('hidden');
 }
