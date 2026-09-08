@@ -1,0 +1,46 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
+  <defs>
+    <linearGradient id="omniGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#6366f1"/>
+      <stop offset="50%" stop-color="#4f46e5"/>
+      <stop offset="100%" stop-color="#8b5cf6"/>
+    </linearGradient>
+    <linearGradient id="foldGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#f43f5e"/>
+      <stop offset="100%" stop-color="#e5322d"/>
+    </linearGradient>
+    <linearGradient id="innerGlow" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#ffffff" stop-opacity="0.25"/>
+      <stop offset="100%" stop-color="#ffffff" stop-opacity="0"/>
+    </linearGradient>
+    <filter id="shadow" x="-10%" y="-10%" width="125%" height="125%">
+      <feDropShadow dx="0" dy="4" stdDeviation="4" flood-color="#000000" flood-opacity="0.35"/>
+    </filter>
+  </defs>
+
+  <!-- Document Body with Shadow -->
+  <path d="M12 6 C12 3.8 13.8 2 16 2 L42 2 L56 16 L56 58 C56 60.2 54.2 62 52 62 L16 62 C13.8 62 12 60.2 12 58 Z" 
+        fill="url(#omniGrad)" 
+        filter="url(#shadow)" />
+
+  <!-- Inner Top Highlight -->
+  <path d="M14 6 C14 4.9 14.9 4 16 4 L41 4 L54 17 L54 58 C54 59.1 53.1 60 52 60 L16 60 C14.9 60 14 59.1 14 58 Z" 
+        fill="none" 
+        stroke="url(#innerGlow)" 
+        stroke-width="1.5" />
+
+  <!-- Document Fold Corner (Red Accent) -->
+  <path d="M42 2 L42 14 C42 15.1 42.9 16 44 16 L56 16 Z" 
+        fill="url(#foldGrad)" />
+
+  <!-- Stylized Bold 'O' Monogram -->
+  <circle cx="34" cy="39" r="13" 
+          fill="none" 
+          stroke="#ffffff" 
+          stroke-width="5" 
+          stroke-linecap="round" />
+
+  <!-- Glowing Center Dot -->
+  <circle cx="34" cy="39" r="4.5" 
+          fill="#38bdf8" />
+</svg>

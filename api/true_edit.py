@@ -185,7 +185,7 @@ class handler(BaseHTTPRequestHandler):
         # Health check endpoint
         res = {
             "status": "online",
-            "service": "PDF Flow PRO - TrueEdit Engine",
+            "service": "Omni PDF - TrueEdit Engine",
             "engine": "PyMuPDF " + pymupdf.__version__,
             "capabilities": [
                 "true_redaction",
