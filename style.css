@@ -3976,6 +3976,15 @@ body.workspace-active {
     transform: translateY(0);
 }
 
+.btn-red-ilovepdf:disabled {
+    background: var(--border-subtle) !important;
+    color: var(--text-muted) !important;
+    cursor: not-allowed !important;
+    box-shadow: none !important;
+    transform: none !important;
+    opacity: 0.65 !important;
+}
+
 .btn-process-arrow {
     font-size: 1.1rem;
     transition: transform 0.15s ease;

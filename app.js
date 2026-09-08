@@ -228,11 +228,15 @@ function renderFileList() {
     const fileSection   = document.getElementById('fileSection');
     const fileCount     = document.getElementById('fileCount');
     const outputSection = document.getElementById('outputSection');
+    const actionSection = document.getElementById('actionSection');
+    const mergeHint     = document.getElementById('mergeHint');
 
     if (pdfItems.length === 0) {
         fileSection.classList.add('hidden');
         outputSection.classList.add('hidden');
-        mergeBtn.disabled = true;
+        if (actionSection) actionSection.classList.add('hidden');
+        if (mergeHint) mergeHint.classList.add('hidden');
+        if (mergeBtn) mergeBtn.disabled = true;
         const gdriveBtn = document.getElementById('mergeGDriveBtn');
         if (gdriveBtn) gdriveBtn.disabled = true;
         return;
@@ -240,14 +244,27 @@ function renderFileList() {
 
     fileSection.classList.remove('hidden');
     outputSection.classList.remove('hidden');
+    if (actionSection) actionSection.classList.remove('hidden');
     fileCount.textContent = pdfItems.length;
     
     // Check if at least 2 files are present and all encrypted files are unlocked
     const hasLocked = pdfItems.some(item => item.isEncrypted && !item.isUnlocked);
     const isReady = pdfItems.length >= 2 && !hasLocked;
-    mergeBtn.disabled = !isReady;
+    if (mergeBtn) mergeBtn.disabled = !isReady;
     const gdriveBtn = document.getElementById('mergeGDriveBtn');
     if (gdriveBtn) gdriveBtn.disabled = !isReady;
+
+    if (mergeHint) {
+        if (pdfItems.length < 2) {
+            mergeHint.classList.remove('hidden');
+            mergeHint.textContent = '💡 Tambahkan minimal 1 file PDF lagi untuk mulai menggabungkan.';
+        } else if (hasLocked) {
+            mergeHint.classList.remove('hidden');
+            mergeHint.textContent = '⚠️ Buka password pada file yang terkunci sebelum menggabungkan.';
+        } else {
+            mergeHint.classList.add('hidden');
+        }
+    }
 
     list.innerHTML = pdfItems.map((item, index) => {
         const thumb = item.thumbnail
