@@ -1010,19 +1010,10 @@ function addTextAnnotation(withBg = false) {
     renderOverlayElement(textItem);
     selectElement(textItem.id);
 
-    // Auto focus text
-    setTimeout(() => {
-        const domEl = document.getElementById(textItem.id);
-        const textDiv = domEl?.querySelector('.editable-text-content');
-        if (textDiv) {
-            textDiv.focus();
-            const range = document.createRange();
-            range.selectNodeContents(textDiv);
-            const sel = window.getSelection();
-            sel.removeAllRanges();
-            sel.addRange(range);
-        }
-    }, 50);
+    const domEl = document.getElementById(textItem.id);
+    if (domEl) {
+        enableTextEditing(domEl, textItem);
+    }
 }
 
 function updateSelectedTextProp(prop, val) {
@@ -1287,22 +1278,21 @@ function renderOverlayElement(item) {
     el.style.left = item.x + 'px';
     el.style.top  = item.y + 'px';
 
-    // Delete handle
+    // Delete handle (Red circular ✕ button)
     const delBtn = document.createElement('div');
     delBtn.className = 'anno-delete-btn';
     delBtn.innerHTML = '✕';
-    delBtn.title = 'Hapus (Delete)';
-    const performDelete = (e) => {
+    delBtn.title = 'Hapus Objek / Tutup (Delete)';
+
+    const triggerDelete = (e) => {
         e.stopPropagation();
         e.preventDefault();
-        selectElement(item.id);
         deleteSelectedElement(item.id);
     };
-    delBtn.onmousedown = (e) => {
-        e.stopPropagation();
-        e.preventDefault();
-    };
-    delBtn.onclick = performDelete;
+
+    delBtn.addEventListener('mousedown', triggerDelete);
+    delBtn.addEventListener('click', triggerDelete);
+    delBtn.addEventListener('touchstart', triggerDelete, { passive: false });
     el.appendChild(delBtn);
 
     // 4 Corner Resize Handles
@@ -1326,7 +1316,7 @@ function renderOverlayElement(item) {
 
         const textDiv = document.createElement('div');
         textDiv.className = 'editable-text-content';
-        textDiv.contentEditable = 'true';
+        textDiv.contentEditable = 'false'; // Start in object selection mode
         textDiv.spellcheck = false;
         textDiv.style.fontFamily = item.fontFamily || textSettings.fontFamily;
         textDiv.style.fontSize   = (item.fontSize || textSettings.fontSize) + 'px';
@@ -1337,6 +1327,10 @@ function renderOverlayElement(item) {
         textDiv.style.textAlign  = item.align || 'left';
         textDiv.innerText = item.content || '';
 
+        // Prevent native HTML5 dragghost on text
+        el.addEventListener('dragstart', (e) => e.preventDefault());
+        textDiv.addEventListener('dragstart', (e) => e.preventDefault());
+
         textDiv.addEventListener('input', () => {
             item.content = textDiv.innerText;
             item.width   = el.offsetWidth;
@@ -1344,13 +1338,7 @@ function renderOverlayElement(item) {
         });
 
         textDiv.addEventListener('blur', () => {
-            item.content = textDiv.innerText.trim() || ' ';
-            item.width   = el.offsetWidth;
-            item.height  = el.offsetHeight;
-        });
-
-        textDiv.addEventListener('focus', () => {
-            selectElement(item.id);
+            disableTextEditing(el, item);
         });
 
         el.appendChild(textDiv);
@@ -1393,14 +1381,58 @@ function renderOverlayElement(item) {
     item.height = el.offsetHeight;
 }
 
+// ─── Text In-Place Editing Helpers ──────────────────────────────
+function enableTextEditing(el, item) {
+    if (!el || item.type !== 'text') return;
+    const textDiv = el.querySelector('.editable-text-content');
+    if (!textDiv) return;
+
+    el.classList.add('is-editing');
+    textDiv.contentEditable = 'true';
+    textDiv.focus();
+
+    const range = document.createRange();
+    range.selectNodeContents(textDiv);
+    range.collapse(false);
+    const sel = window.getSelection();
+    sel.removeAllRanges();
+    sel.addRange(range);
+}
+
+function disableTextEditing(el, item) {
+    if (!el) return;
+    const textDiv = el.querySelector('.editable-text-content');
+    if (textDiv) {
+        textDiv.contentEditable = 'false';
+        item.content = textDiv.innerText.trim() || ' ';
+        item.width   = el.offsetWidth;
+        item.height  = el.offsetHeight;
+    }
+    el.classList.remove('is-editing');
+}
+
 // ─── Drag & Resize Interaction Handlers ─────────────────────────
 function attachElementInteractions(el, item) {
     const textContentEl = el.querySelector('.editable-text-content');
+
+    // Double-click directly enters text editing
+    if (item.type === 'text') {
+        el.addEventListener('dblclick', (e) => {
+            if (e.target.classList.contains('anno-handle') || e.target.classList.contains('anno-delete-btn')) return;
+            e.stopPropagation();
+            selectElement(item.id);
+            enableTextEditing(el, item);
+        });
+    }
 
     el.addEventListener('mousedown', (e) => {
         if (e.target.classList.contains('anno-handle') || e.target.classList.contains('anno-delete-btn')) {
             return;
         }
+
+        const wasAlreadySelected = (selectedElementId === item.id);
+        const isEditingNow = el.classList.contains('is-editing');
+
         selectElement(item.id);
 
         let startX = e.clientX;
@@ -1418,8 +1450,8 @@ function attachElementInteractions(el, item) {
                 if (!isMoving) {
                     isMoving = true;
                     saveStateForUndo();
-                    if (document.activeElement && document.activeElement.isContentEditable) {
-                        document.activeElement.blur();
+                    if (isEditingNow) {
+                        disableTextEditing(el, item);
                     }
                     window.getSelection()?.removeAllRanges();
                 }
@@ -1438,9 +1470,10 @@ function attachElementInteractions(el, item) {
                 item.width  = el.offsetWidth;
                 item.height = el.offsetHeight;
             } else {
-                // If clicked without dragging and on text content, focus for typing
-                if (textContentEl && (e.target === textContentEl || textContentEl.contains(e.target))) {
-                    textContentEl.focus();
+                // If clicked without dragging:
+                // If already selected and it's a text box, enter in-place text editing!
+                if (wasAlreadySelected && item.type === 'text' && !isEditingNow) {
+                    enableTextEditing(el, item);
                 }
             }
         };
@@ -1519,7 +1552,13 @@ function selectElement(id) {
 
 function deselectAllElements() {
     selectedElementId = null;
-    document.querySelectorAll('.anno-element').forEach(el => el.classList.remove('selected'));
+    document.querySelectorAll('.anno-element').forEach(el => {
+        el.classList.remove('selected');
+        if (el.classList.contains('is-editing')) {
+            const item = getElementById(el.id);
+            if (item) disableTextEditing(el, item);
+        }
+    });
     const propBars = ['propsText', 'propsShape', 'propsImage', 'propsWhiteout'];
     propBars.forEach(id => document.getElementById(id)?.classList.add('hidden'));
     const badgeWrap = document.getElementById('trueEditBadgeWrap');
@@ -1560,9 +1599,7 @@ function deleteSelectedElement(targetId) {
     }
     const domEl = document.getElementById(idToDelete);
     if (domEl) domEl.remove();
-    if (!targetId || selectedElementId === targetId) {
-        deselectAllElements();
-    }
+    deselectAllElements();
 }
 
 function getElementById(id) {
