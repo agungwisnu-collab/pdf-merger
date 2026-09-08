@@ -81,6 +81,16 @@ document.addEventListener('DOMContentLoaded', () => {
         if (e.target.files.length > 0) handleFileSelect(e.target.files[0]);
     });
 
+    // Deselect elements when clicking empty canvas stage or viewport
+    const editorViewport = document.getElementById('editorViewport');
+    if (editorViewport) {
+        editorViewport.addEventListener('mousedown', (e) => {
+            if (!e.target.closest('.anno-element') && !e.target.closest('.pdf-text-item') && !e.target.closest('.editor-toolbar-box') && !e.target.closest('.editor-sidebar-pages')) {
+                deselectAllElements();
+            }
+        });
+    }
+
     initDrawingCanvasEvents();
     initKeyboardShortcuts();
 });
@@ -113,12 +123,28 @@ function initKeyboardShortcuts() {
             duplicateSelectedElement();
         } else if (e.key === 'Delete' || e.key === 'Backspace') {
             const activeEl = document.activeElement;
-            if (activeEl && (activeEl.isContentEditable || activeEl.tagName === 'INPUT' || activeEl.tagName === 'TEXTAREA')) {
+            if (activeEl && (activeEl.tagName === 'INPUT' || activeEl.tagName === 'TEXTAREA')) {
+                return;
+            }
+            if (activeEl && activeEl.isContentEditable) {
+                const text = (activeEl.innerText || '').trim();
+                // If text box is empty or only whitespace, delete the box
+                if (text === '' || text === '\n') {
+                    e.preventDefault();
+                    deleteSelectedElement();
+                    return;
+                }
                 return;
             }
             if (selectedElementId) {
                 e.preventDefault();
                 deleteSelectedElement();
+            }
+        } else if (e.key === 'Escape') {
+            if (document.activeElement && document.activeElement.isContentEditable) {
+                document.activeElement.blur();
+            } else {
+                deselectAllElements();
             }
         }
     });
@@ -302,8 +328,42 @@ function showPropsForSelectedElement() {
             document.getElementById('toolTextBtn')?.classList.add('active');
         }
         document.getElementById('propsText')?.classList.remove('hidden');
-        document.getElementById('textFontFamily').value = item.fontFamily || textSettings.fontFamily;
-        document.getElementById('textFontSize').value = item.fontSize || textSettings.fontSize;
+
+        const fontSelect = document.getElementById('textFontFamily');
+        if (fontSelect && item.fontFamily) {
+            let found = false;
+            for (let opt of fontSelect.options) {
+                if (opt.value === item.fontFamily || (item.fontFamily.toLowerCase().includes('times') && opt.value.includes('Times')) || (item.fontFamily.toLowerCase().includes('courier') && opt.value.includes('Courier')) || (item.fontFamily.toLowerCase().includes('arial') && opt.value.includes('Arial'))) {
+                    fontSelect.value = opt.value;
+                    found = true;
+                    break;
+                }
+            }
+            if (!found) {
+                fontSelect.value = item.fontFamily;
+            }
+        }
+
+        const sizeSelect = document.getElementById('textFontSize');
+        if (sizeSelect && item.fontSize) {
+            const rSize = Math.round(item.fontSize);
+            let found = false;
+            for (let opt of sizeSelect.options) {
+                if (parseInt(opt.value) === rSize) {
+                    sizeSelect.value = opt.value;
+                    found = true;
+                    break;
+                }
+            }
+            if (!found) {
+                const opt = document.createElement('option');
+                opt.value = rSize;
+                opt.textContent = `${rSize} px`;
+                opt.selected = true;
+                sizeSelect.appendChild(opt);
+            }
+        }
+
         document.getElementById('textBoldBtn')?.classList.toggle('active', !!item.isBold);
         document.getElementById('textItalicBtn')?.classList.toggle('active', !!item.isItalic);
         document.getElementById('textUnderlineBtn')?.classList.toggle('active', !!item.isUnderline);
@@ -568,6 +628,34 @@ function renderDetectedImagesForCurrentPage() {
     });
 }
 
+// ─── Font Detection Helper for 1-to-1 Match ──────────────────────
+function detectFontProperties(fontName, styleObj) {
+    const rawName = (fontName || '').toLowerCase();
+    const cssFamily = (styleObj?.fontFamily || '').toLowerCase();
+
+    let fontFamily = 'Arial, sans-serif';
+    if (rawName.includes('times') || rawName.includes('serif') || rawName.includes('garamond') || rawName.includes('georgia') || rawName.includes('cambria') || cssFamily.includes('serif')) {
+        fontFamily = "'Times New Roman', serif";
+    } else if (rawName.includes('courier') || rawName.includes('mono') || rawName.includes('consolas') || cssFamily.includes('monospace')) {
+        fontFamily = "'Courier New', monospace";
+    } else if (rawName.includes('comic')) {
+        fontFamily = "'Comic Sans MS', cursive";
+    } else if (rawName.includes('georgia')) {
+        fontFamily = "Georgia, serif";
+    } else if (rawName.includes('calibri')) {
+        fontFamily = "Calibri, Arial, sans-serif";
+    } else if (rawName.includes('helvetica') || rawName.includes('arial') || rawName.includes('sans') || cssFamily.includes('sans-serif')) {
+        fontFamily = "Arial, sans-serif";
+    } else if (styleObj?.fontFamily) {
+        fontFamily = styleObj.fontFamily;
+    }
+
+    const isBold = rawName.includes('bold') || rawName.includes('black') || rawName.includes('heavy') || rawName.includes('semibold') || rawName.includes('demi') || (styleObj?.fontWeight >= 600);
+    const isItalic = rawName.includes('italic') || rawName.includes('oblique') || rawName.includes('slanted') || styleObj?.fontStyle === 'italic';
+
+    return { fontFamily, isBold, isItalic };
+}
+
 // ─── Interactive Text Layer Detection ───────────────────────────
 async function renderInteractiveTextLayer(page, viewport) {
     const textLayerDiv = document.getElementById('pdfTextLayer');
@@ -582,7 +670,7 @@ async function renderInteractiveTextLayer(page, viewport) {
         const rect = textLayerDiv.getBoundingClientRect();
         const clickX = (e.clientX - rect.left) * (textLayerDiv.offsetWidth / rect.width);
         const clickY = (e.clientY - rect.top) * (textLayerDiv.offsetHeight / rect.height);
-        replaceExistingPdfText('Teks baru...', clickX, clickY, 140, 16);
+        replaceExistingPdfText('Teks baru...', clickX, clickY, 140, 20, 16);
     };
 
     try {
@@ -591,11 +679,14 @@ async function renderInteractiveTextLayer(page, viewport) {
             if (!item.str || item.str.trim() === '') return;
 
             const tx = pdfjsLib.Util.transform(viewport.transform, item.transform);
-            const fontHeight = Math.sqrt((tx[2] * tx[2]) + (tx[3] * tx[3]));
+            const fontHeight = Math.hypot(tx[2], tx[3]) || Math.hypot(tx[0], tx[1]) || 16;
             const left = tx[4];
             const top  = tx[5] - fontHeight;
             const width = item.width * viewport.scale;
             const height = fontHeight * 1.15;
+
+            const styleObj = (textContent.styles && textContent.styles[item.fontName]) ? textContent.styles[item.fontName] : null;
+            const detected = detectFontProperties(item.fontName, styleObj);
 
             // Check if this text is already lifted into an editable element or deleted
             const isAlreadyLifted = pageEdits[currentPage]?.elements?.some(el => el.isTrueEdit && el.origRect && Math.abs(el.origRect[0] - left) < 5 && Math.abs(el.origRect[1] - top) < 5);
@@ -609,11 +700,11 @@ async function renderInteractiveTextLayer(page, viewport) {
             span.style.top    = `${top}px`;
             span.style.width  = `${width}px`;
             span.style.height = `${height}px`;
-            span.title = `Klik untuk edit teks langsung: "${item.str}"`;
+            span.title = `Klik untuk pilih / edit / hapus teks: "${item.str}"`;
 
             span.onclick = (e) => {
                 e.stopPropagation();
-                replaceExistingPdfText(item.str, left, top, width, Math.round(fontHeight), span);
+                replaceExistingPdfText(item.str, left, top, width, height, fontHeight, span, detected);
             };
 
             textLayerDiv.appendChild(span);
@@ -623,12 +714,16 @@ async function renderInteractiveTextLayer(page, viewport) {
     }
 }
 
-function replaceExistingPdfText(originalText, exactLeft, exactTop, width, fontSize, clickedSpan) {
+function replaceExistingPdfText(originalText, exactLeft, exactTop, width, height, fontSize, clickedSpan, detectedFont) {
     saveStateForUndo();
     if (!pageEdits[currentPage]) pageEdits[currentPage] = { elements: [], deletedElements: [] };
 
-    const cleanFontSize = Math.max(12, Math.min(40, fontSize || 16));
-    const origRect = [exactLeft, exactTop, exactLeft + width, exactTop + (cleanFontSize * 1.25)];
+    // Precise unconstrained font size and box dimensions
+    const cleanFontSize = Math.max(6, Math.round((fontSize || 16) * 10) / 10);
+    const boxW = Math.max(8, Math.ceil(width || 120));
+    const boxH = Math.ceil(height || cleanFontSize * 1.15);
+
+    const origRect = [exactLeft, exactTop, exactLeft + boxW, exactTop + boxH];
 
     // 1. Physically erase the glyphs from the background canvas!
     eraseRectFromBgCanvas(origRect);
@@ -641,20 +736,22 @@ function replaceExistingPdfText(originalText, exactLeft, exactTop, width, fontSi
     // 2. Position element with transparent background (pure in-place editing, no white sticker!)
     const posX = Math.max(0, Math.round(exactLeft));
     const posY = Math.max(0, Math.round(exactTop));
-    const boxW = Math.max(50, Math.round(width + 4));
-    const boxH = Math.round((cleanFontSize * 1.25) + 4);
+
+    const fontFam = detectedFont?.fontFamily || textSettings.fontFamily || 'Arial, sans-serif';
+    const isBold = (detectedFont?.isBold !== undefined) ? detectedFont.isBold : textSettings.isBold;
+    const isItalic = (detectedFont?.isItalic !== undefined) ? detectedFont.isItalic : textSettings.isItalic;
 
     const replaceItem = {
-        id: 'replace_' + Date.now(),
+        id: 'replace_' + Date.now() + '_' + Math.random().toString(36).substr(2, 4),
         type: 'text',
         content: originalText,
         x: posX,
         y: posY,
-        fontFamily: textSettings.fontFamily,
+        fontFamily: fontFam,
         fontSize: cleanFontSize,
-        color: textSettings.color,
-        isBold: textSettings.isBold,
-        isItalic: textSettings.isItalic,
+        color: '#000000',
+        isBold: isBold,
+        isItalic: isItalic,
         isUnderline: false,
         align: 'left',
         hasBg: false, // Pure transparent! No white sticker!
@@ -669,19 +766,6 @@ function replaceExistingPdfText(originalText, exactLeft, exactTop, width, fontSi
     pageEdits[currentPage].elements.push(replaceItem);
     renderOverlayElement(replaceItem);
     selectElement(replaceItem.id);
-
-    setTimeout(() => {
-        const domEl = document.getElementById(replaceItem.id);
-        const textDiv = domEl?.querySelector('.editable-text-content');
-        if (textDiv) {
-            textDiv.focus();
-            const range = document.createRange();
-            range.selectNodeContents(textDiv);
-            const sel = window.getSelection();
-            sel.removeAllRanges();
-            sel.addRange(range);
-        }
-    }, 50);
 }
 
 // ─── Tip-Ex / Whiteout Box ──────────────────────────────────────
@@ -1208,10 +1292,17 @@ function renderOverlayElement(item) {
     delBtn.className = 'anno-delete-btn';
     delBtn.innerHTML = '✕';
     delBtn.title = 'Hapus (Delete)';
-    delBtn.onclick = (e) => {
+    const performDelete = (e) => {
         e.stopPropagation();
-        deleteSelectedElement();
+        e.preventDefault();
+        selectElement(item.id);
+        deleteSelectedElement(item.id);
     };
+    delBtn.onmousedown = (e) => {
+        e.stopPropagation();
+        e.preventDefault();
+    };
+    delBtn.onclick = performDelete;
     el.appendChild(delBtn);
 
     // 4 Corner Resize Handles
@@ -1240,7 +1331,7 @@ function renderOverlayElement(item) {
         textDiv.style.fontFamily = item.fontFamily || textSettings.fontFamily;
         textDiv.style.fontSize   = (item.fontSize || textSettings.fontSize) + 'px';
         textDiv.style.color      = item.color || textSettings.color;
-        textDiv.style.fontWeight = item.isBold ? '800' : '500';
+        textDiv.style.fontWeight = item.isBold ? '700' : 'normal';
         textDiv.style.fontStyle  = item.isItalic ? 'italic' : 'normal';
         textDiv.style.textDecoration = item.isUnderline ? 'underline' : 'none';
         textDiv.style.textAlign  = item.align || 'left';
@@ -1312,39 +1403,50 @@ function attachElementInteractions(el, item) {
         }
         selectElement(item.id);
 
-        // If clicking directly inside the editable text area, allow direct caret typing!
-        if (e.target === textContentEl || e.target.isContentEditable) {
-            return;
-        }
-
-        saveStateForUndo();
         let startX = e.clientX;
         let startY = e.clientY;
         let initX  = item.x;
         let initY  = item.y;
-        let isMoving = true;
+        let isMoving = false;
 
         const onMouseMove = (moveEvt) => {
-            if (!isMoving) return;
             const dx = (moveEvt.clientX - startX) / currentZoom;
             const dy = (moveEvt.clientY - startY) / currentZoom;
-            item.x = Math.max(0, initX + dx);
-            item.y = Math.max(0, initY + dy);
-            el.style.left = item.x + 'px';
-            el.style.top  = item.y + 'px';
+            const dist = Math.hypot(dx, dy);
+
+            if (dist > 3) {
+                if (!isMoving) {
+                    isMoving = true;
+                    saveStateForUndo();
+                    if (document.activeElement && document.activeElement.isContentEditable) {
+                        document.activeElement.blur();
+                    }
+                    window.getSelection()?.removeAllRanges();
+                }
+                item.x = Math.max(0, initX + dx);
+                item.y = Math.max(0, initY + dy);
+                el.style.left = item.x + 'px';
+                el.style.top  = item.y + 'px';
+            }
         };
 
         const onMouseUp = () => {
-            isMoving = false;
-            item.width  = el.offsetWidth;
-            item.height = el.offsetHeight;
             document.removeEventListener('mousemove', onMouseMove);
             document.removeEventListener('mouseup', onMouseUp);
+
+            if (isMoving) {
+                item.width  = el.offsetWidth;
+                item.height = el.offsetHeight;
+            } else {
+                // If clicked without dragging and on text content, focus for typing
+                if (textContentEl && (e.target === textContentEl || textContentEl.contains(e.target))) {
+                    textContentEl.focus();
+                }
+            }
         };
 
         document.addEventListener('mousemove', onMouseMove);
         document.addEventListener('mouseup', onMouseUp);
-        e.preventDefault();
     });
 
     // Resize Handles
@@ -1424,14 +1526,15 @@ function deselectAllElements() {
     if (badgeWrap) badgeWrap.style.display = 'none';
 }
 
-function deleteSelectedElement() {
-    if (!selectedElementId) return;
+function deleteSelectedElement(targetId) {
+    const idToDelete = targetId || selectedElementId;
+    if (!idToDelete) return;
     saveStateForUndo();
 
     if (!pageEdits[currentPage]) pageEdits[currentPage] = { elements: [], deletedElements: [] };
     if (!pageEdits[currentPage].deletedElements) pageEdits[currentPage].deletedElements = [];
 
-    const item = getElementById(selectedElementId);
+    const item = getElementById(idToDelete);
     if (item) {
         if (item.isTrueEdit && item.origRect) {
             // Register original text deletion for PyMuPDF vector redaction
@@ -1453,11 +1556,13 @@ function deleteSelectedElement() {
     }
 
     if (pageEdits[currentPage]?.elements) {
-        pageEdits[currentPage].elements = pageEdits[currentPage].elements.filter(e => e.id !== selectedElementId);
+        pageEdits[currentPage].elements = pageEdits[currentPage].elements.filter(e => e.id !== idToDelete);
     }
-    const domEl = document.getElementById(selectedElementId);
+    const domEl = document.getElementById(idToDelete);
     if (domEl) domEl.remove();
-    deselectAllElements();
+    if (!targetId || selectedElementId === targetId) {
+        deselectAllElements();
+    }
 }
 
 function getElementById(id) {
@@ -1768,13 +1873,15 @@ async function exportPureVectorPDF(basePdfBytes) {
                     let lineWidth = 0;
                     try { lineWidth = chosenFont.widthOfTextAtSize(line, fontSize); } catch (_) {}
 
-                    let textX = el.x + 4;
+                    const padX = el.hasBg ? 4 : 0;
+                    const padY = el.hasBg ? 4 : 0;
+                    let textX = el.x + padX;
                     if (el.align === 'center') {
                         textX = el.x + Math.max(0, (el.width - lineWidth) / 2);
                     } else if (el.align === 'right') {
-                        textX = el.x + Math.max(0, el.width - lineWidth - 4);
+                        textX = el.x + Math.max(0, el.width - lineWidth - padX);
                     }
-                    const textY = pageH - (el.y + 4 + (fontSize * 0.85) + (lIdx * lineHeight));
+                    const textY = pageH - (el.y + padY + (fontSize * 0.85) + (lIdx * lineHeight));
 
                     page.drawText(line, {
                         x: textX,
