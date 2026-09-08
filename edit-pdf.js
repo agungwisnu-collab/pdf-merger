@@ -86,20 +86,41 @@ document.addEventListener('DOMContentLoaded', () => {
     const editorViewport = document.getElementById('editorViewport');
     if (editorViewport) {
         editorViewport.addEventListener('mousedown', (e) => {
-            if (!e.target.closest('.anno-element') && !e.target.closest('.pdf-text-item') && !e.target.closest('.editor-toolbar-box') && !e.target.closest('.editor-sidebar-pages')) {
+            if (!e.target.closest('.anno-element') && !e.target.closest('.pdf-text-item') && !e.target.closest('.editor-toolbar-box') && !e.target.closest('.editor-sidebar-pages') && !e.target.closest('.preview-floating-nav')) {
                 deselectAllElements();
             }
         });
+
+        // Smooth Zoom with Ctrl + Mouse Wheel (or trackpad pinch)
+        editorViewport.addEventListener('wheel', (e) => {
+            if (e.ctrlKey || e.metaKey) {
+                e.preventDefault();
+                if (e.deltaY < 0) {
+                    zoomIn();
+                } else if (e.deltaY > 0) {
+                    zoomOut();
+                }
+            }
+        }, { passive: false });
     }
 
     initDrawingCanvasEvents();
     initKeyboardShortcuts();
 });
 
-// ─── Keyboard Shortcuts (Ctrl+Z, Delete, etc.) ──────────────────
+// ─── Keyboard Shortcuts (Ctrl+Z, Delete, Zoom, etc.) ────────────
 function initKeyboardShortcuts() {
     document.addEventListener('keydown', (e) => {
-        if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'z') {
+        if ((e.ctrlKey || e.metaKey) && (e.key === '=' || e.key === '+')) {
+            e.preventDefault();
+            zoomIn();
+        } else if ((e.ctrlKey || e.metaKey) && (e.key === '-' || e.key === '_')) {
+            e.preventDefault();
+            zoomOut();
+        } else if ((e.ctrlKey || e.metaKey) && e.key === '0') {
+            e.preventDefault();
+            resetZoom();
+        } else if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'z') {
             if (e.shiftKey) {
                 e.preventDefault();
                 redoAction();
@@ -422,7 +443,11 @@ function eraseRectFromBgCanvas(rect) {
 async function renderCurrentPage() {
     if (!pdfDocJs) return;
 
-    document.getElementById('pageNavText').textContent = `${currentPage} / ${totalPages}`;
+    const pageText = `${currentPage} / ${totalPages}`;
+    const pageNavEl = document.getElementById('pageNavText');
+    const previewNavEl = document.getElementById('previewPageNavText');
+    if (pageNavEl) pageNavEl.textContent = pageText;
+    if (previewNavEl) previewNavEl.textContent = pageText;
     const page = await pdfDocJs.getPage(currentPage);
     const baseViewport = page.getViewport({ scale: 1.0 });
 
@@ -719,7 +744,7 @@ async function renderInteractiveTextLayer(page, viewport) {
 
             span.onclick = (e) => {
                 e.stopPropagation();
-                replaceExistingPdfText(item.str, left, top, width, height, fontHeight, span, detected);
+                replaceExistingPdfText(item.str, left, top, width, height, fontHeight, span, detected, tx[5]);
             };
 
             textLayerDiv.appendChild(span);
@@ -729,16 +754,18 @@ async function renderInteractiveTextLayer(page, viewport) {
     }
 }
 
-function replaceExistingPdfText(originalText, exactLeft, exactTop, width, height, fontSize, clickedSpan, detectedFont) {
+function replaceExistingPdfText(originalText, exactLeft, exactTop, width, height, fontSize, clickedSpan, detectedFont, origBaselineY) {
     saveStateForUndo();
     if (!pageEdits[currentPage]) pageEdits[currentPage] = { elements: [], deletedElements: [] };
 
-    // Precise unconstrained font size and box dimensions
+    // Precise unconstrained font size and box dimensions with generous anti-wrapping buffer
     const cleanFontSize = Math.max(6, Math.round((fontSize || 16) * 10) / 10);
-    const boxW = Math.max(8, Math.ceil(width || 120));
-    const boxH = Math.ceil(height || cleanFontSize * 1.15);
+    const textBuffer = Math.max(22, Math.ceil(cleanFontSize * 1.5));
+    const boxW = Math.max(16, Math.ceil(width + textBuffer));
+    const boxH = Math.ceil(height || cleanFontSize * 1.25);
 
-    const origRect = [exactLeft, exactTop, exactLeft + boxW, exactTop + boxH];
+    // Exact erase rect bounding box for glyphs
+    const origRect = [exactLeft, exactTop, exactLeft + Math.ceil(width), exactTop + Math.ceil(height || cleanFontSize * 1.15)];
 
     // 1. Physically erase the glyphs from the background canvas!
     eraseRectFromBgCanvas(origRect);
@@ -775,6 +802,7 @@ function replaceExistingPdfText(originalText, exactLeft, exactTop, width, height
         isTrueEdit: true,
         origRect: origRect,
         origText: originalText,
+        origBaseline: origBaselineY !== undefined ? origBaselineY : (posY + cleanFontSize),
         pageIndex: currentPage - 1
     };
 
@@ -829,23 +857,27 @@ function resetZoom() {
 function fitToWidth() {
     const viewport = document.getElementById('editorViewport');
     const bgCanvas = document.getElementById('pdfBgCanvas');
-    if (!viewport || !bgCanvas || bgCanvas.width === 0) return;
+    if (!viewport || !bgCanvas) return;
 
-    const availableWidth = viewport.clientWidth - 48;
-    const fitScale = +(availableWidth / bgCanvas.width).toFixed(2);
-    currentZoom = Math.max(0.5, Math.min(2.0, fitScale));
+    const baseW = parseFloat(bgCanvas.style.width) || (bgCanvas.width / (pageDpr || 1));
+    if (!baseW) return;
+
+    const availableWidth = viewport.clientWidth - 56;
+    const fitScale = +(availableWidth / baseW).toFixed(2);
+    currentZoom = Math.max(0.4, Math.min(2.5, fitScale));
     applyZoom();
 }
 
 function applyZoom() {
     const stage = document.getElementById('canvasStage');
     const display = document.getElementById('zoomDisplay');
+    const previewDisplay = document.getElementById('previewZoomDisplay');
     if (stage) {
         stage.style.transform = `scale(${currentZoom})`;
     }
-    if (display) {
-        display.textContent = `${Math.round(currentZoom * 100)}%`;
-    }
+    const zoomText = `${Math.round(currentZoom * 100)}%`;
+    if (display) display.textContent = zoomText;
+    if (previewDisplay) previewDisplay.textContent = zoomText;
 }
 
 // ─── Page Navigation ────────────────────────────────────────────
@@ -1330,7 +1362,8 @@ function renderOverlayElement(item) {
         if (item.height) el.style.minHeight = item.height + 'px';
 
         const textDiv = document.createElement('div');
-        textDiv.className = 'editable-text-content';
+        const isMulti = item.content && item.content.includes('\n');
+        textDiv.className = 'editable-text-content' + (isMulti ? ' is-multiline' : '');
         textDiv.contentEditable = 'false'; // Start in object selection mode
         textDiv.spellcheck = false;
         textDiv.style.fontFamily = item.fontFamily || textSettings.fontFamily;
@@ -1348,8 +1381,17 @@ function renderOverlayElement(item) {
 
         textDiv.addEventListener('input', () => {
             item.content = textDiv.innerText;
-            item.width   = el.offsetWidth;
-            item.height  = el.offsetHeight;
+            if (item.content.includes('\n')) {
+                textDiv.classList.add('is-multiline');
+            }
+            if (textDiv.scrollWidth > el.offsetWidth - 6) {
+                const newW = textDiv.scrollWidth + 16;
+                el.style.width = newW + 'px';
+                item.width = newW;
+            } else {
+                item.width  = el.offsetWidth;
+            }
+            item.height = el.offsetHeight;
         });
 
         textDiv.addEventListener('blur', () => {
@@ -1931,7 +1973,14 @@ async function exportPureVectorPDF(basePdfBytes) {
                     } else if (el.align === 'right') {
                         textX = el.x + Math.max(0, el.width - lineWidth);
                     }
-                    const textY = pageH - (el.y + (fontSize * 0.82) + (lIdx * lineHeight));
+
+                    // Exact baseline calculation: use original font baseline to prevent any upward/downward shifting
+                    let baselineFromTop = (el.y + (fontSize * 0.95));
+                    if (el.origBaseline !== undefined) {
+                        const yShift = el.origRect ? (el.y - el.origRect[1]) : 0;
+                        baselineFromTop = el.origBaseline + yShift;
+                    }
+                    const textY = pageH - (baselineFromTop + (lIdx * lineHeight));
 
                     page.drawText(line, {
                         x: textX,
@@ -2021,6 +2070,7 @@ async function buildExportPdfBlob() {
                         action: 'edit_text',
                         rect: origR,
                         targetRect: [targetLeft, targetTop, targetRight, targetBottom],
+                        origBaseline: el.origBaseline,
                         newText: el.content || '',
                         fontFamily: el.fontFamily || textSettings.fontFamily,
                         fontSize: el.fontSize || 16,
@@ -2188,8 +2238,11 @@ function drawTextOnCanvas(ctx, el, scaleFactor) {
 
     ctx.fillStyle = el.color || '#0f172a';
     
-    // Exact baseline offset: font baseline (0.82 * fontSize)
-    const baselineOffset = (fontSizePx * 0.82) * scaleFactor;
+    // Exact baseline offset: font baseline
+    let baselineOffset = (fontSizePx * 0.95) * scaleFactor;
+    if (el.origBaseline !== undefined && el.origRect) {
+        baselineOffset = (el.origBaseline - el.origRect[1]) * scaleFactor;
+    }
     
     lines.forEach((line, idx) => {
         let textX = el.x * scaleFactor;

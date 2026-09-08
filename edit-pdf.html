@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Edit Dokumen PDF — Tambah Teks, Gambar, Bentuk & Coretan PDF Online</title>
     <meta name="description" content="Edit dokumen PDF lengkap secara online dengan zoom, kustomisasi font, warna pena bebas, sisipkan foto dengan resize, serta tambahkan aneka bentuk (kotak, lingkaran, panah).">
-    <link rel="stylesheet" href="style.css?v=9">
+    <link rel="stylesheet" href="style.css?v=10">
     <script src="theme.js?v=8"></script>
     <script src="https://unpkg.com/pdf-lib@1.17.1/dist/pdf-lib.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
@@ -349,6 +349,22 @@
                                 <canvas id="drawingCanvas"></canvas>
                                 <div id="annotationOverlay"></div>
                             </div>
+
+                            <!-- Floating In-Preview Navigation Pill (iLovePDF Style) -->
+                            <div class="preview-floating-nav" id="previewFloatingNav">
+                                <div class="floating-nav-group">
+                                    <button class="floating-nav-btn" onclick="prevPage()" title="Halaman Sebelumnya (◀)">◀</button>
+                                    <span id="previewPageNavText" class="floating-nav-text">1 / 1</span>
+                                    <button class="floating-nav-btn" onclick="nextPage()" title="Halaman Selanjutnya (▶)">▶</button>
+                                </div>
+                                <div class="floating-nav-divider"></div>
+                                <div class="floating-nav-group">
+                                    <button class="floating-nav-btn" onclick="zoomOut()" title="Perkecil (− atau Ctrl+Scroll Bawah)">−</button>
+                                    <span class="floating-nav-text" id="previewZoomDisplay" onclick="resetZoom()" title="Klik untuk reset 100%">100%</span>
+                                    <button class="floating-nav-btn" onclick="zoomIn()" title="Perbesar (+ atau Ctrl+Scroll Atas)">+</button>
+                                    <button class="floating-nav-btn fit-btn" onclick="fitToWidth()" title="Pas Lebar Halaman">Fit</button>
+                                </div>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -390,6 +406,6 @@
 
     <script src="gdrive-config.js?v=4"></script>
     <script src="gdrive-picker.js?v=4"></script>
-    <script src="edit-pdf.js?v=9"></script>
+    <script src="edit-pdf.js?v=10"></script>
 </body>
 </html>

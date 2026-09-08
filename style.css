@@ -2793,19 +2793,101 @@ body {
     background: #eaebef;
     border: 1px solid var(--border-subtle);
     border-radius: 12px;
-    padding: 32px 20px;
+    padding: 32px 20px 24px 20px;
     box-shadow: inset 0 2px 6px rgba(0, 0, 0, 0.05);
     overflow: auto;
     max-height: 75vh;
     display: flex;
-    justify-content: center;
-    align-items: flex-start;
+    flex-direction: column;
+    align-items: center;
     position: relative;
 }
 
 [data-theme="dark"] .editor-viewport-wrapper {
     background: #181c27;
     box-shadow: inset 0 2px 8px rgba(0, 0, 0, 0.4);
+}
+
+/* Floating In-Preview Navigation Pill (iLovePDF Style) */
+.preview-floating-nav {
+    position: sticky;
+    bottom: 16px;
+    margin-top: 18px;
+    z-index: 85;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    background: rgba(15, 23, 42, 0.88);
+    backdrop-filter: blur(14px);
+    -webkit-backdrop-filter: blur(14px);
+    padding: 6px 14px;
+    border-radius: 30px;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.25), 0 2px 6px rgba(0, 0, 0, 0.15);
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    pointer-events: auto;
+    user-select: none;
+    transition: transform 0.2s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.2s ease;
+    align-self: center;
+}
+
+.preview-floating-nav:hover {
+    transform: scale(1.02);
+    box-shadow: 0 10px 28px rgba(0, 0, 0, 0.32);
+}
+
+.floating-nav-group {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.floating-nav-btn {
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    border: none;
+    background: transparent;
+    color: #f8fafc;
+    font-size: 0.85rem;
+    font-weight: 700;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    transition: background 0.15s ease, color 0.15s ease, transform 0.1s ease;
+}
+
+.floating-nav-btn:hover {
+    background: rgba(255, 255, 255, 0.2);
+    color: #ffffff;
+    transform: scale(1.1);
+}
+
+.floating-nav-btn.fit-btn {
+    width: auto;
+    border-radius: 12px;
+    padding: 0 8px;
+    font-size: 0.72rem;
+    background: rgba(255, 255, 255, 0.1);
+}
+
+.floating-nav-btn.fit-btn:hover {
+    background: rgba(255, 255, 255, 0.25);
+}
+
+.floating-nav-text {
+    font-size: 0.78rem;
+    font-weight: 700;
+    color: #f8fafc;
+    min-width: 48px;
+    text-align: center;
+    cursor: pointer;
+}
+
+.floating-nav-divider {
+    width: 1px;
+    height: 18px;
+    background: rgba(255, 255, 255, 0.2);
 }
 
 /* Genuine Paper Document Appearance with Authentic Depth & Crisp Edges */
@@ -2913,11 +2995,17 @@ body {
     cursor: move !important;
     user-select: none !important;
     -webkit-user-select: none !important;
-    white-space: pre-wrap;
-    word-break: break-word;
+    white-space: pre; /* Keep single line by default to prevent wrapping original text into 2 lines */
+    word-break: normal;
+    overflow: visible;
     line-height: 1.15;
     padding: 0;
     margin: 0;
+}
+
+.editable-text-content.is-multiline {
+    white-space: pre-wrap;
+    word-break: break-word;
 }
 
 .anno-element.is-editing .editable-text-content {
