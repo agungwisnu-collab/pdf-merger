@@ -1222,7 +1222,7 @@ async function callTrueEditEngine(file, edits) {
     const arrayBuf = await file.arrayBuffer();
     const pdfBase64 = arrayBufferToBase64(arrayBuf);
 
-    const response = await fetch('/api/true-edit', {
+    const response = await fetch('/api/true_edit', {
         method: 'POST',
         headers: {
             'Content-Type': 'application/json'

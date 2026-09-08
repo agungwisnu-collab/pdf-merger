@@ -1,10 +1,10 @@
 {
-  "cleanUrls": true,
+  "cleanUrls": false,
   "trailingSlash": false,
   "rewrites": [
     {
       "source": "/api/true-edit",
-      "destination": "/api/true_edit.py"
+      "destination": "/api/true_edit"
     }
   ],
   "headers": [

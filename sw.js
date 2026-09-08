@@ -2,7 +2,7 @@
  *  sw.js — Service Worker for Offline PWA Support
  * ============================================================ */
 
-const CACHE_NAME = 'pdf-flow-v10';
+const CACHE_NAME = 'pdf-flow-v11';
 const ASSETS_TO_CACHE = [
     './',
     './index.html',
@@ -46,6 +46,8 @@ const ASSETS_TO_CACHE = [
     './gdrive-config.js',
     './gdrive-picker.js',
     './manifest.json',
+    './icon-192.png',
+    './icon-512.png'
 ];
 
 self.addEventListener('install', (e) => {
@@ -69,7 +71,12 @@ self.addEventListener('activate', (e) => {
 });
 
 self.addEventListener('fetch', (e) => {
-    // Cache first, fallback to network (ignore query string for versioned assets)
+    // 1. Bypass Service Worker for non-GET requests (e.g. POST to TrueEdit) or API endpoints
+    if (e.request.method !== 'GET' || e.request.url.includes('/api/')) {
+        return;
+    }
+
+    // 2. Cache first, fallback to network (ignore query string for versioned assets)
     e.respondWith(
         caches.match(e.request, { ignoreSearch: true }).then((cachedResponse) => {
             return cachedResponse || fetch(e.request).then((networkResponse) => {
