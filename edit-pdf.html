@@ -210,9 +210,24 @@
                                 </div>
                             </div>
                             <div class="prop-item">
-                                <button type="button" id="textBoldBtn" class="editor-toggle-btn" onclick="toggleTextBold()"><b>B</b></button>
-                                <button type="button" id="textItalicBtn" class="editor-toggle-btn" onclick="toggleTextItalic()"><i>I</i></button>
-                                <button type="button" id="textBgBtn" class="editor-toggle-btn" onclick="toggleTextBackground()">🔲 Latar Putih</button>
+                                <button type="button" id="textBoldBtn" class="editor-toggle-btn" onclick="toggleTextBold()" title="Tebal (Ctrl+B)"><b>B</b></button>
+                                <button type="button" id="textItalicBtn" class="editor-toggle-btn" onclick="toggleTextItalic()" title="Miring (Ctrl+I)"><i>I</i></button>
+                                <button type="button" id="textUnderlineBtn" class="editor-toggle-btn" onclick="toggleTextUnderline()" title="Garis Bawah (Ctrl+U)"><u>U</u></button>
+                                <button type="button" id="textBgBtn" class="editor-toggle-btn" onclick="toggleTextBackground()" title="Beri Latar Belakang / Highlight">🔲 Latar</button>
+                            </div>
+                            <div class="prop-item">
+                                <span class="prop-label">Rata:</span>
+                                <div class="btn-group-segmented">
+                                    <button type="button" id="textAlignLeftBtn" class="editor-toggle-btn active" onclick="setTextAlign('left')" title="Rata Kiri">⯇</button>
+                                    <button type="button" id="textAlignCenterBtn" class="editor-toggle-btn" onclick="setTextAlign('center')" title="Rata Tengah">⯎</button>
+                                    <button type="button" id="textAlignRightBtn" class="editor-toggle-btn" onclick="setTextAlign('right')" title="Rata Kanan">⯈</button>
+                                </div>
+                            </div>
+                            <div class="prop-item">
+                                <button type="button" class="btn btn-outline-secondary btn-sm" onclick="duplicateSelectedElement()" title="Gandakan Objek (Ctrl+D)">➕ Gandakan</button>
+                                <button type="button" class="btn btn-outline-secondary btn-sm" onclick="bringSelectedForward()" title="Bawa ke Depan">🔼 Maju</button>
+                                <button type="button" class="btn btn-outline-secondary btn-sm" onclick="sendSelectedBackward()" title="Kirim ke Belakang">🔽 Mundur</button>
+                                <button type="button" class="btn btn-danger-outline btn-sm" onclick="deleteSelectedElement()" title="Hapus Teks/Objek (Delete)">🗑️ Hapus</button>
                             </div>
                         </div>
 
@@ -277,6 +292,10 @@
                             </div>
                             <div class="prop-item">
                                 <button type="button" class="btn btn-primary btn-small" onclick="addShapeToPage()">➕ Pasang Bentuk</button>
+                                <button type="button" class="btn btn-outline-secondary btn-sm" onclick="duplicateSelectedElement()" title="Gandakan Bentuk">➕ Gandakan</button>
+                                <button type="button" class="btn btn-outline-secondary btn-sm" onclick="bringSelectedForward()" title="Bawa ke Depan">🔼 Maju</button>
+                                <button type="button" class="btn btn-outline-secondary btn-sm" onclick="sendSelectedBackward()" title="Kirim ke Belakang">🔽 Mundur</button>
+                                <button type="button" class="btn btn-danger-outline btn-sm" onclick="deleteSelectedElement()">🗑️ Hapus</button>
                             </div>
                         </div>
 
@@ -289,6 +308,9 @@
                             </div>
                             <div class="prop-item">
                                 <button type="button" class="editor-toggle-btn" onclick="rotateSelectedImage(90)">🔄 Putar 90°</button>
+                                <button type="button" class="btn btn-outline-secondary btn-sm" onclick="duplicateSelectedElement()" title="Gandakan Foto">➕ Gandakan</button>
+                                <button type="button" class="btn btn-outline-secondary btn-sm" onclick="bringSelectedForward()" title="Bawa ke Depan">🔼 Maju</button>
+                                <button type="button" class="btn btn-outline-secondary btn-sm" onclick="sendSelectedBackward()" title="Kirim ke Belakang">🔽 Mundur</button>
                                 <button type="button" class="btn btn-danger-outline btn-sm" onclick="deleteSelectedElement()">🗑️ Hapus Foto</button>
                             </div>
                         </div>
@@ -306,13 +328,23 @@
                         </div>
                     </div>
 
-                    <!-- Canvas Stage Viewport (Scrollable & Zoomable) -->
-                    <div class="editor-viewport-wrapper" id="editorViewport">
-                        <div class="editor-canvas-stage" id="canvasStage">
-                            <canvas id="pdfBgCanvas"></canvas>
-                            <div id="pdfTextLayer" class="pdf-text-layer"></div>
-                            <canvas id="drawingCanvas"></canvas>
-                            <div id="annotationOverlay"></div>
+                    <!-- Canvas Stage Viewport (Scrollable & Zoomable) with Left Sidebar -->
+                    <div class="editor-workspace-body">
+                        <!-- Left Pages Sidebar (Multi-Page Thumbnails) -->
+                        <aside class="editor-sidebar-pages" id="pagesSidebar">
+                            <div class="sidebar-pages-header">
+                                <span class="sidebar-title">📑 Halaman (<span id="sidebarPageCount">1</span>)</span>
+                            </div>
+                            <div class="sidebar-pages-list" id="sidebarPagesList"></div>
+                        </aside>
+
+                        <div class="editor-viewport-wrapper" id="editorViewport">
+                            <div class="editor-canvas-stage" id="canvasStage">
+                                <canvas id="pdfBgCanvas"></canvas>
+                                <div id="pdfTextLayer" class="pdf-text-layer"></div>
+                                <canvas id="drawingCanvas"></canvas>
+                                <div id="annotationOverlay"></div>
+                            </div>
                         </div>
                     </div>
                 </div>

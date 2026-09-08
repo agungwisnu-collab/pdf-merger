@@ -2857,3 +2857,169 @@ body {
     z-index: 20;
     white-space: nowrap;
 }
+
+/* ============================================================
+   iLovePDF-Grade Sidebar & Workspace Layout
+   ============================================================ */
+.editor-workspace-body {
+    display: flex;
+    gap: 0;
+    position: relative;
+    background: var(--bg-card);
+    border: 1px solid var(--border-subtle);
+    border-radius: 12px;
+    overflow: hidden;
+    min-height: 600px;
+    box-shadow: 0 8px 30px rgba(0, 0, 0, 0.04);
+}
+
+/* Left Pages Sidebar */
+.editor-sidebar-pages {
+    width: 170px;
+    min-width: 170px;
+    background: var(--bg-subtle);
+    border-right: 1px solid var(--border-subtle);
+    display: flex;
+    flex-direction: column;
+    z-index: 10;
+}
+
+.sidebar-pages-header {
+    padding: 10px 12px;
+    border-bottom: 1px solid var(--border-subtle);
+    font-size: 0.78rem;
+    font-weight: 700;
+    color: var(--text-muted);
+    background: var(--bg-card);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+
+.sidebar-pages-list {
+    flex: 1;
+    overflow-y: auto;
+    padding: 12px 10px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    max-height: 720px;
+}
+
+.sidebar-pages-list::-webkit-scrollbar {
+    width: 5px;
+}
+.sidebar-pages-list::-webkit-scrollbar-thumb {
+    background: var(--border-subtle);
+    border-radius: 4px;
+}
+
+/* Page Thumbnail Card */
+.sidebar-page-card {
+    background: var(--bg-card);
+    border: 2px solid var(--border-subtle);
+    border-radius: 8px;
+    padding: 6px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 6px;
+    user-select: none;
+}
+
+.sidebar-page-card:hover {
+    border-color: var(--primary);
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+}
+
+.sidebar-page-card.active {
+    border-color: var(--primary);
+    box-shadow: 0 0 0 3px var(--primary-light, rgba(99, 102, 241, 0.2));
+    background: var(--bg-subtle);
+}
+
+.sidebar-page-thumb {
+    width: 100%;
+    height: auto;
+    border-radius: 4px;
+    display: block;
+    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.1);
+    background: #ffffff;
+}
+
+.sidebar-page-badge {
+    font-size: 0.72rem;
+    font-weight: 700;
+    color: var(--text-muted);
+    padding: 1px 6px;
+    border-radius: 4px;
+}
+
+.sidebar-page-card.active .sidebar-page-badge {
+    color: var(--primary);
+    background: var(--primary-light, rgba(99, 102, 241, 0.1));
+}
+
+/* Viewport Adjustments inside Workspace Body */
+.editor-workspace-body .editor-viewport-wrapper {
+    flex: 1;
+    border: none;
+    border-radius: 0;
+    background: var(--bg-subtle);
+    min-height: 600px;
+}
+
+/* Segmented Button Group (Text Alignment) */
+.btn-group-segmented {
+    display: inline-flex;
+    background: var(--bg-subtle);
+    border: 1px solid var(--border-subtle);
+    border-radius: 8px;
+    padding: 2px;
+    gap: 2px;
+}
+
+.btn-group-segmented .editor-toggle-btn {
+    border: none;
+    border-radius: 6px;
+    padding: 3px 8px;
+    font-size: 0.8rem;
+    min-width: 28px;
+    text-align: center;
+}
+
+.btn-group-segmented .editor-toggle-btn.active {
+    background: var(--primary);
+    color: #ffffff;
+}
+
+/* Detected Image Element on Page */
+.anno-image-detected {
+    outline: 2px dashed #3b82f6;
+    background: rgba(59, 130, 246, 0.06);
+    cursor: move;
+}
+
+.anno-image-detected::after {
+    content: '🖼️ Gambar';
+    position: absolute;
+    top: -20px;
+    left: 0;
+    font-size: 0.65rem;
+    font-weight: 800;
+    background: #3b82f6;
+    color: #ffffff;
+    padding: 1px 6px;
+    border-radius: 4px;
+    pointer-events: none;
+    white-space: nowrap;
+}
+
+@media (max-width: 768px) {
+    .editor-sidebar-pages {
+        display: none;
+    }
+}

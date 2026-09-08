@@ -75,7 +75,7 @@ def get_standard_font(family_name, is_bold=False, is_italic=False):
 
 def process_true_edit(pdf_bytes, edits):
     """
-    Apply TrueEdit text redaction and injection using PyMuPDF.
+    Apply TrueEdit text/image redaction, deletion, and injection using PyMuPDF.
     """
     doc = pymupdf.open(stream=pdf_bytes, filetype="pdf")
 
@@ -90,19 +90,48 @@ def process_true_edit(pdf_bytes, edits):
             continue
 
         rect = pymupdf.Rect(rect_raw[0], rect_raw[1], rect_raw[2], rect_raw[3])
-        # Ensure rect is valid (x0 < x1, y0 < y1)
         rect.normalize()
 
-        # 1. True Redaction: Remove glyph stream operators
-        # If useWhiteout is True, fill with white.
-        # Otherwise fill=None removes the text transparently, keeping background image!
-        fill_color = (1.0, 1.0, 1.0) if edit.get("useWhiteout", False) else None
+        action = edit.get("action", "edit_text")
 
+        # 1. Action: Delete Image (Removes raster image stream without touching text)
+        if action == "delete_image":
+            page.add_redact_annot(rect, fill=None)
+            page.apply_redactions(images=pymupdf.PDF_REDACT_IMAGE_REMOVE)
+            continue
+
+        # 2. Action: Delete Text (Transparent redaction, preserves background image)
+        if action == "delete_text":
+            fill_color = (1.0, 1.0, 1.0) if edit.get("useWhiteout", False) else None
+            page.add_redact_annot(rect, fill=fill_color)
+            page.apply_redactions(images=pymupdf.PDF_REDACT_IMAGE_NONE)
+            continue
+
+        # 3. Action: Move Image (Redact from old bbox, insert at new target bbox)
+        if action == "move_image":
+            page.add_redact_annot(rect, fill=None)
+            page.apply_redactions(images=pymupdf.PDF_REDACT_IMAGE_REMOVE)
+
+            target_raw = edit.get("targetRect", rect_raw)
+            target_rect = pymupdf.Rect(target_raw[0], target_raw[1], target_raw[2], target_raw[3])
+            target_rect.normalize()
+
+            img_b64 = edit.get("imageData", "")
+            if img_b64:
+                if "," in img_b64:
+                    img_b64 = img_b64.split(",", 1)[1]
+                try:
+                    img_bytes = base64.b64decode(img_b64)
+                    page.insert_image(target_rect, stream=img_bytes)
+                except Exception as err:
+                    print("Error inserting moved image:", err)
+            continue
+
+        # 4. Action: Edit / Move Text (Default)
+        fill_color = (1.0, 1.0, 1.0) if edit.get("useWhiteout", False) else None
         page.add_redact_annot(rect, fill=fill_color)
-        # Apply redactions preserving any background images
         page.apply_redactions(images=pymupdf.PDF_REDACT_IMAGE_NONE)
 
-        # 2. Insert new text at target coordinates as native vector text
         new_text = str(edit.get("newText", ""))
         if new_text.strip():
             target_raw = edit.get("targetRect", rect_raw)
@@ -154,7 +183,16 @@ class handler(BaseHTTPRequestHandler):
             "status": "online",
             "service": "PDF Flow PRO - TrueEdit Engine",
             "engine": "PyMuPDF " + pymupdf.__version__,
-            "capabilities": ["true_redaction", "vector_injection", "background_preservation"]
+            "capabilities": [
+                "true_redaction",
+                "vector_injection",
+                "background_preservation",
+                "delete_text",
+                "delete_image",
+                "move_text",
+                "move_image",
+                "document_inspect"
+            ]
         }
         body = json.dumps(res).encode('utf-8')
         self.send_response(200)
@@ -177,7 +215,7 @@ class handler(BaseHTTPRequestHandler):
             pdf_bytes = None
             edits = []
 
-            # Handle JSON body (recommended)
+            # Handle JSON body
             if 'application/json' in content_type:
                 data = json.loads(post_data.decode('utf-8'))
                 raw_b64 = data.get('pdfBase64', '')
@@ -188,6 +226,37 @@ class handler(BaseHTTPRequestHandler):
                 if ',' in raw_b64:
                     raw_b64 = raw_b64.split(',', 1)[1]
                 pdf_bytes = base64.b64decode(raw_b64)
+
+                # Check if this is an inspect action
+                if data.get('action') == 'inspect':
+                    doc = pymupdf.open(stream=pdf_bytes, filetype="pdf")
+                    pages_data = []
+                    for p_idx in range(len(doc)):
+                        p = doc[p_idx]
+                        blocks = [
+                            {'rect': [round(x, 1) for x in b[:4]], 'text': b[4].strip()}
+                            for b in p.get_text('blocks') if b[4].strip()
+                        ]
+                        images = [
+                            {'rect': [round(x, 1) for x in img['bbox']], 'xref': img.get('xref', 0)}
+                            for img in p.get_image_info()
+                        ]
+                        pages_data.append({
+                            'page': p_idx,
+                            'width': p.rect.width,
+                            'height': p.rect.height,
+                            'textBlocks': blocks,
+                            'imageBlocks': images
+                        })
+                    res_body = json.dumps({'status': 'ok', 'pages': pages_data}).encode('utf-8')
+                    self.send_response(200)
+                    self._send_cors_headers()
+                    self.send_header('Content-Type', 'application/json')
+                    self.send_header('Content-Length', str(len(res_body)))
+                    self.end_headers()
+                    self.wfile.write(res_body)
+                    return
+
                 edits = data.get('edits', [])
             else:
                 self._send_error_json(400, "Unsupported content-type. Please use application/json.")

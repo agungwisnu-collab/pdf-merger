@@ -20,20 +20,23 @@ let currentZoom       = 1.0;
 let activeTool        = 'select'; // 'select' | 'text' | 'replaceText' | 'whiteout' | 'pen' | 'highlighter' | 'shape' | 'image'
 let selectedElementId = null;
 
-// Page Edits Store: { [pageNum]: { elements: [], drawingDataUrl: '' } }
+// Page Edits Store: { [pageNum]: { elements: [], deletedElements: [], drawingDataUrl: '' } }
 let pageEdits = {};
+let detectedPageElements = {}; // { [pageNum]: { textBlocks: [], imageBlocks: [] } }
 
 // History Stack for Global Undo / Redo
 let undoStack = [];
 let redoStack = [];
 
-// Text Tool Settings
+// Text Tool Settings (Typography & Alignment)
 let textSettings = {
     fontFamily: 'Plus Jakarta Sans, sans-serif',
     fontSize: 16,
     color: '#0f172a',
     isBold: false,
     isItalic: false,
+    isUnderline: false,
+    align: 'left', // 'left' | 'center' | 'right'
     hasBg: false
 };
 
@@ -96,6 +99,18 @@ function initKeyboardShortcuts() {
         } else if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'y') {
             e.preventDefault();
             redoAction();
+        } else if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'b') {
+            e.preventDefault();
+            toggleTextBold();
+        } else if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'i') {
+            e.preventDefault();
+            toggleTextItalic();
+        } else if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'u') {
+            e.preventDefault();
+            toggleTextUnderline();
+        } else if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'd') {
+            e.preventDefault();
+            duplicateSelectedElement();
         } else if (e.key === 'Delete' || e.key === 'Backspace') {
             const activeEl = document.activeElement;
             if (activeEl && (activeEl.isContentEditable || activeEl.tagName === 'INPUT' || activeEl.tagName === 'TEXTAREA')) {
@@ -130,6 +145,7 @@ async function handleFileSelect(file) {
     currentPage = 1;
     currentZoom = 1.0;
     pageEdits   = {};
+    detectedPageElements = {};
     undoStack   = [];
     redoStack   = [];
     selectedElementId = null;
@@ -151,6 +167,8 @@ async function handleFileSelect(file) {
 
         setActiveTool('select');
         await renderCurrentPage();
+        renderSidebarThumbnails();
+        inspectDocumentElements(file);
         hideProgress();
     } catch (err) {
         hideProgress();
@@ -162,6 +180,7 @@ function clearFile() {
     pdfFile     = null;
     pdfDocJs    = null;
     pageEdits   = {};
+    detectedPageElements = {};
     undoStack   = [];
     redoStack   = [];
     document.getElementById('workspaceSection').classList.add('hidden');
@@ -287,10 +306,15 @@ function showPropsForSelectedElement() {
         document.getElementById('textFontSize').value = item.fontSize || textSettings.fontSize;
         document.getElementById('textBoldBtn')?.classList.toggle('active', !!item.isBold);
         document.getElementById('textItalicBtn')?.classList.toggle('active', !!item.isItalic);
+        document.getElementById('textUnderlineBtn')?.classList.toggle('active', !!item.isUnderline);
         document.getElementById('textBgBtn')?.classList.toggle('active', !!item.hasBg);
+        const curAlign = item.align || 'left';
+        ['Left', 'Center', 'Right'].forEach(dir => {
+            document.getElementById(`textAlign${dir}Btn`)?.classList.toggle('active', dir.toLowerCase() === curAlign);
+        });
         const badgeWrap = document.getElementById('trueEditBadgeWrap');
         if (badgeWrap) badgeWrap.style.display = item.isTrueEdit ? 'inline-flex' : 'none';
-    } else if (item.type === 'image') {
+    } else if (item.type === 'image' || item.type === 'detected_image') {
         document.getElementById('toolImageBtn')?.classList.add('active');
         document.getElementById('propsImage')?.classList.remove('hidden');
         const opacity = item.opacity !== undefined ? Math.round(item.opacity * 100) : 100;
@@ -346,8 +370,140 @@ async function renderCurrentPage() {
         });
     }
 
+    renderDetectedImagesForCurrentPage();
     applyZoom();
     updateHistoryButtons();
+    updateThumbnailActiveState();
+}
+
+// ─── Sidebar Thumbnails Engine ──────────────────────────────────
+async function renderSidebarThumbnails() {
+    const sidebarList = document.getElementById('sidebarPagesList');
+    const countEl = document.getElementById('sidebarPageCount');
+    if (!sidebarList) return;
+
+    sidebarList.innerHTML = '';
+    if (countEl) countEl.textContent = totalPages;
+
+    for (let p = 1; p <= totalPages; p++) {
+        const card = document.createElement('div');
+        card.className = `sidebar-page-card ${p === currentPage ? 'active' : ''}`;
+        card.dataset.page = p;
+        card.title = `Halaman ${p}`;
+        card.onclick = () => switchPage(p);
+
+        const canvas = document.createElement('canvas');
+        canvas.className = 'sidebar-page-thumb';
+        card.appendChild(canvas);
+
+        const badge = document.createElement('span');
+        badge.className = 'sidebar-page-badge';
+        badge.textContent = `Hal ${p}`;
+        card.appendChild(badge);
+
+        sidebarList.appendChild(card);
+
+        renderThumbnailCanvas(p, canvas);
+    }
+}
+
+async function renderThumbnailCanvas(pageNum, canvas) {
+    if (!pdfDocJs) return;
+    try {
+        const page = await pdfDocJs.getPage(pageNum);
+        const vp = page.getViewport({ scale: 0.22 });
+        canvas.width = vp.width;
+        canvas.height = vp.height;
+        const ctx = canvas.getContext('2d');
+        await page.render({ canvasContext: ctx, viewport: vp }).promise;
+    } catch (err) {
+        console.warn('Thumbnail canvas note:', err);
+    }
+}
+
+function switchPage(pageNum) {
+    if (pageNum === currentPage || pageNum < 1 || pageNum > totalPages) return;
+    saveCurrentPageEdits();
+    currentPage = pageNum;
+    deselectAllElements();
+    renderCurrentPage();
+}
+
+function updateThumbnailActiveState() {
+    const cards = document.querySelectorAll('.sidebar-page-card');
+    cards.forEach(c => {
+        const p = parseInt(c.dataset.page, 10);
+        const isActive = (p === currentPage);
+        c.classList.toggle('active', isActive);
+        if (isActive) {
+            c.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+        }
+    });
+}
+
+// ─── Document Elements Inspection Engine (Text & Images) ────────
+async function inspectDocumentElements(file) {
+    if (!file || file.size > 4.2 * 1024 * 1024 || navigator.onLine === false) return;
+    try {
+        const arrayBuf = await file.arrayBuffer();
+        const pdfBase64 = arrayBufferToBase64(arrayBuf);
+        const res = await fetch('/api/true_edit', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                action: 'inspect',
+                pdfBase64: pdfBase64
+            })
+        });
+        if (!res.ok) return;
+        const json = await res.json();
+        if (json.status === 'ok' && json.pages) {
+            json.pages.forEach(p => {
+                detectedPageElements[p.page + 1] = {
+                    textBlocks: p.textBlocks || [],
+                    imageBlocks: p.imageBlocks || []
+                };
+            });
+            renderDetectedImagesForCurrentPage();
+        }
+    } catch (err) {
+        console.warn('Inspection note:', err);
+    }
+}
+
+function renderDetectedImagesForCurrentPage() {
+    const pageData = detectedPageElements[currentPage];
+    if (!pageData || !pageData.imageBlocks || pageData.imageBlocks.length === 0) return;
+    if (!pageEdits[currentPage]) pageEdits[currentPage] = { elements: [], deletedElements: [] };
+    if (!pageEdits[currentPage].deletedElements) pageEdits[currentPage].deletedElements = [];
+
+    const deleted = pageEdits[currentPage].deletedElements;
+    const existingElements = pageEdits[currentPage].elements || [];
+
+    pageData.imageBlocks.forEach((img, idx) => {
+        const isDeleted = deleted.some(d => d.action === 'delete_image' && d.xref === img.xref);
+        const isAdded = existingElements.some(el => el.origXref === img.xref || el.id === `orig_img_${currentPage}_${idx}`);
+        if (isDeleted || isAdded) return;
+
+        const rect = img.rect; // [x0, y0, x1, y1]
+        const w = Math.max(24, Math.round(rect[2] - rect[0]));
+        const h = Math.max(24, Math.round(rect[3] - rect[1]));
+
+        const imgItem = {
+            id: `orig_img_${currentPage}_${idx}`,
+            type: 'detected_image',
+            x: Math.round(rect[0]),
+            y: Math.round(rect[1]),
+            width: w,
+            height: h,
+            origRect: [rect[0], rect[1], rect[2], rect[3]],
+            origXref: img.xref,
+            isOriginalImage: true
+        };
+
+        pageEdits[currentPage].elements.push(imgItem);
+        renderOverlayElement(imgItem);
+    });
 }
 
 // ─── Interactive Text Layer Detection ───────────────────────────
@@ -683,6 +839,8 @@ function addTextAnnotation(withBg = false) {
         color: textSettings.color,
         isBold: textSettings.isBold,
         isItalic: textSettings.isItalic,
+        isUnderline: textSettings.isUnderline,
+        align: textSettings.align || 'left',
         hasBg: withBg || textSettings.hasBg,
         width: 150,
         height: Math.round(fontSize * 1.25 + 4)
@@ -735,6 +893,79 @@ function toggleTextItalic() {
     document.getElementById('textItalicBtn')?.classList.toggle('active', nextVal);
 }
 
+function toggleTextUnderline() {
+    const item = getElementById(selectedElementId);
+    const nextVal = item ? !item.isUnderline : !textSettings.isUnderline;
+    textSettings.isUnderline = nextVal;
+    updateSelectedTextProp('isUnderline', nextVal);
+    document.getElementById('textUnderlineBtn')?.classList.toggle('active', nextVal);
+}
+
+function setTextAlign(align) {
+    textSettings.align = align;
+    updateSelectedTextProp('align', align);
+    ['Left', 'Center', 'Right'].forEach(dir => {
+        document.getElementById(`textAlign${dir}Btn`)?.classList.toggle('active', dir.toLowerCase() === align);
+    });
+}
+
+function duplicateSelectedElement() {
+    if (!selectedElementId) return;
+    const item = getElementById(selectedElementId);
+    if (!item) return;
+    saveStateForUndo();
+
+    const clone = JSON.parse(JSON.stringify(item));
+    clone.id = item.type + '_' + Date.now();
+    clone.x = (clone.x || 60) + 20;
+    clone.y = (clone.y || 60) + 20;
+
+    // If cloning original text/image, mark clone as new standalone annotation
+    clone.isTrueEdit = false;
+    clone.isOriginalImage = false;
+    delete clone.origRect;
+    delete clone.origText;
+    delete clone.origXref;
+
+    pageEdits[currentPage].elements.push(clone);
+    renderOverlayElement(clone);
+    selectElement(clone.id);
+}
+
+function bringSelectedForward() {
+    if (!selectedElementId || !pageEdits[currentPage]?.elements) return;
+    saveStateForUndo();
+    const els = pageEdits[currentPage].elements;
+    const idx = els.findIndex(e => e.id === selectedElementId);
+    if (idx !== -1 && idx < els.length - 1) {
+        const temp = els[idx];
+        els[idx] = els[idx + 1];
+        els[idx + 1] = temp;
+        refreshOverlayZIndexes();
+    }
+}
+
+function sendSelectedBackward() {
+    if (!selectedElementId || !pageEdits[currentPage]?.elements) return;
+    saveStateForUndo();
+    const els = pageEdits[currentPage].elements;
+    const idx = els.findIndex(e => e.id === selectedElementId);
+    if (idx > 0) {
+        const temp = els[idx];
+        els[idx] = els[idx - 1];
+        els[idx - 1] = temp;
+        refreshOverlayZIndexes();
+    }
+}
+
+function refreshOverlayZIndexes() {
+    if (!pageEdits[currentPage]?.elements) return;
+    pageEdits[currentPage].elements.forEach((el, index) => {
+        const domEl = document.getElementById(el.id);
+        if (domEl) domEl.style.zIndex = 10 + index;
+    });
+}
+
 function toggleTextBackground() {
     const nextVal = !textSettings.hasBg;
     updateSelectedTextProp('hasBg', nextVal);
@@ -751,6 +982,8 @@ function applyTextStyleToDOM(item) {
         textDiv.style.color      = item.color;
         textDiv.style.fontWeight = item.isBold ? '800' : '500';
         textDiv.style.fontStyle  = item.isItalic ? 'italic' : 'normal';
+        textDiv.style.textDecoration = item.isUnderline ? 'underline' : 'none';
+        textDiv.style.textAlign  = item.align || 'left';
     }
     el.classList.toggle('has-bg', !!item.hasBg);
     item.width  = el.offsetWidth;
@@ -933,6 +1166,8 @@ function renderOverlayElement(item) {
         textDiv.style.color      = item.color || textSettings.color;
         textDiv.style.fontWeight = item.isBold ? '800' : '500';
         textDiv.style.fontStyle  = item.isItalic ? 'italic' : 'normal';
+        textDiv.style.textDecoration = item.isUnderline ? 'underline' : 'none';
+        textDiv.style.textAlign  = item.align || 'left';
         textDiv.innerText = item.content || '';
 
         textDiv.addEventListener('input', () => {
@@ -966,6 +1201,12 @@ function renderOverlayElement(item) {
         img.style.pointerEvents = 'none';
         if (item.rotation) img.style.transform = `rotate(${item.rotation}deg)`;
         el.appendChild(img);
+
+    } else if (item.type === 'detected_image') {
+        el.classList.add('anno-image-detected');
+        el.style.width  = item.width + 'px';
+        el.style.height = item.height + 'px';
+        el.title = 'Gambar Dokumen Asli (Geser untuk pindah posisi, atau klik ✕ untuk hapus)';
 
     } else if (item.type === 'shape') {
         el.style.width  = item.width + 'px';
@@ -1113,7 +1354,31 @@ function deselectAllElements() {
 function deleteSelectedElement() {
     if (!selectedElementId) return;
     saveStateForUndo();
-    
+
+    if (!pageEdits[currentPage]) pageEdits[currentPage] = { elements: [], deletedElements: [] };
+    if (!pageEdits[currentPage].deletedElements) pageEdits[currentPage].deletedElements = [];
+
+    const item = getElementById(selectedElementId);
+    if (item) {
+        if (item.isTrueEdit && item.origRect) {
+            // Register original text deletion for PyMuPDF vector redaction
+            pageEdits[currentPage].deletedElements.push({
+                action: 'delete_text',
+                page: currentPage - 1,
+                rect: item.origRect,
+                origText: item.origText
+            });
+        } else if (item.isOriginalImage && item.origRect) {
+            // Register original image deletion for PyMuPDF image stream removal
+            pageEdits[currentPage].deletedElements.push({
+                action: 'delete_image',
+                page: currentPage - 1,
+                rect: item.origRect,
+                xref: item.origXref
+            });
+        }
+    }
+
     if (pageEdits[currentPage]?.elements) {
         pageEdits[currentPage].elements = pageEdits[currentPage].elements.filter(e => e.id !== selectedElementId);
     }
@@ -1141,6 +1406,7 @@ function saveStateForUndo() {
     const snapshot = {
         page: currentPage,
         elements: JSON.parse(JSON.stringify(pageEdits[currentPage]?.elements || [])),
+        deletedElements: JSON.parse(JSON.stringify(pageEdits[currentPage]?.deletedElements || [])),
         drawingDataUrl: drawCanvas ? drawCanvas.toDataURL() : ''
     };
     undoStack.push(snapshot);
@@ -1156,13 +1422,15 @@ function undoAction() {
     const currentSnapshot = {
         page: currentPage,
         elements: JSON.parse(JSON.stringify(pageEdits[currentPage]?.elements || [])),
+        deletedElements: JSON.parse(JSON.stringify(pageEdits[currentPage]?.deletedElements || [])),
         drawingDataUrl: drawCanvas ? drawCanvas.toDataURL() : ''
     };
     redoStack.push(currentSnapshot);
 
     const prevState = undoStack.pop();
-    if (!pageEdits[prevState.page]) pageEdits[prevState.page] = { elements: [] };
+    if (!pageEdits[prevState.page]) pageEdits[prevState.page] = { elements: [], deletedElements: [] };
     pageEdits[prevState.page].elements = prevState.elements;
+    pageEdits[prevState.page].deletedElements = prevState.deletedElements || [];
     pageEdits[prevState.page].drawingDataUrl = prevState.drawingDataUrl;
 
     if (currentPage !== prevState.page) {
@@ -1179,13 +1447,15 @@ function redoAction() {
     const currentSnapshot = {
         page: currentPage,
         elements: JSON.parse(JSON.stringify(pageEdits[currentPage]?.elements || [])),
+        deletedElements: JSON.parse(JSON.stringify(pageEdits[currentPage]?.deletedElements || [])),
         drawingDataUrl: drawCanvas ? drawCanvas.toDataURL() : ''
     };
     undoStack.push(currentSnapshot);
 
     const nextState = redoStack.pop();
-    if (!pageEdits[nextState.page]) pageEdits[nextState.page] = { elements: [] };
+    if (!pageEdits[nextState.page]) pageEdits[nextState.page] = { elements: [], deletedElements: [] };
     pageEdits[nextState.page].elements = nextState.elements;
+    pageEdits[nextState.page].deletedElements = nextState.deletedElements || [];
     pageEdits[nextState.page].drawingDataUrl = nextState.drawingDataUrl;
 
     if (currentPage !== nextState.page) {
@@ -1245,170 +1515,280 @@ async function callTrueEditEngine(file, edits) {
     return await response.arrayBuffer();
 }
 
-async function renderDocumentViaCanvas() {
-    const { PDFDocument } = PDFLib;
-    const newPdfDoc = await PDFDocument.create();
+// ─── Pure Vector Shape Renderer for PDFLib ──────────────────────
+function drawShapeOnPdfLib(page, pageH, el, rgb) {
+    const strokeCol = hexToRgb01(el.strokeColor || '#ef4444');
+    let fillCol = null;
+    let fillOpacity = 1;
+    if (el.fillType === 'solid' && el.fillColor) {
+        fillCol = hexToRgb01(el.fillColor);
+    } else if (el.fillType === 'solid') {
+        fillCol = strokeCol;
+    } else if (el.fillType === 'semi') {
+        fillCol = strokeCol;
+        fillOpacity = 0.25;
+    }
 
-    for (let i = 1; i <= totalPages; i++) {
-        const pct = Math.round(20 + (i / totalPages) * 70);
-        showProgress(pct, `Menyimpan lembar ${i} dari ${totalPages}...`);
+    const strokeW = el.strokeWidth || 3;
+    const x = el.x;
+    const y = pageH - (el.y + el.height);
+    const w = el.width;
+    const h = el.height;
 
-        const page = await pdfDocJs.getPage(i);
-        const renderScale = 2.5;
-        const viewport = page.getViewport({ scale: renderScale });
+    if (el.shapeType === 'rect') {
+        page.drawRectangle({
+            x, y, width: w, height: h,
+            borderColor: rgb(strokeCol.r, strokeCol.g, strokeCol.b),
+            borderWidth: strokeW,
+            color: fillCol ? rgb(fillCol.r, fillCol.g, fillCol.b) : undefined,
+            opacity: fillCol ? fillOpacity : undefined
+        });
+    } else if (el.shapeType === 'circle') {
+        page.drawEllipse({
+            x: x + w / 2,
+            y: y + h / 2,
+            xScale: w / 2,
+            yScale: h / 2,
+            borderColor: rgb(strokeCol.r, strokeCol.g, strokeCol.b),
+            borderWidth: strokeW,
+            color: fillCol ? rgb(fillCol.r, fillCol.g, fillCol.b) : undefined,
+            opacity: fillCol ? fillOpacity : undefined
+        });
+    } else if (el.shapeType === 'line') {
+        page.drawLine({
+            start: { x: x, y: y + h / 2 },
+            end: { x: x + w, y: y + h / 2 },
+            thickness: strokeW,
+            color: rgb(strokeCol.r, strokeCol.g, strokeCol.b)
+        });
+    } else if (el.shapeType === 'arrow') {
+        page.drawLine({
+            start: { x: x, y: y + h / 2 },
+            end: { x: x + w - 10, y: y + h / 2 },
+            thickness: strokeW,
+            color: rgb(strokeCol.r, strokeCol.g, strokeCol.b)
+        });
+        page.drawLine({
+            start: { x: x + w - 12, y: y + h / 2 + 6 },
+            end: { x: x + w, y: y + h / 2 },
+            thickness: strokeW,
+            color: rgb(strokeCol.r, strokeCol.g, strokeCol.b)
+        });
+        page.drawLine({
+            start: { x: x + w - 12, y: y + h / 2 - 6 },
+            end: { x: x + w, y: y + h / 2 },
+            thickness: strokeW,
+            color: rgb(strokeCol.r, strokeCol.g, strokeCol.b)
+        });
+    } else if (el.shapeType === 'check') {
+        page.drawLine({
+            start: { x: x + w * 0.15, y: y + h * 0.5 },
+            end: { x: x + w * 0.4, y: y + h * 0.25 },
+            thickness: strokeW * 1.5,
+            color: rgb(strokeCol.r, strokeCol.g, strokeCol.b)
+        });
+        page.drawLine({
+            start: { x: x + w * 0.4, y: y + h * 0.25 },
+            end: { x: x + w * 0.85, y: y + h * 0.8 },
+            thickness: strokeW * 1.5,
+            color: rgb(strokeCol.r, strokeCol.g, strokeCol.b)
+        });
+    } else if (el.shapeType === 'cross') {
+        page.drawLine({
+            start: { x: x + w * 0.2, y: y + h * 0.8 },
+            end: { x: x + w * 0.8, y: y + h * 0.2 },
+            thickness: strokeW * 1.5,
+            color: rgb(strokeCol.r, strokeCol.g, strokeCol.b)
+        });
+        page.drawLine({
+            start: { x: x + w * 0.8, y: y + h * 0.8 },
+            end: { x: x + w * 0.2, y: y + h * 0.2 },
+            thickness: strokeW * 1.5,
+            color: rgb(strokeCol.r, strokeCol.g, strokeCol.b)
+        });
+    }
+}
 
-        const canvas = document.createElement('canvas');
-        canvas.width  = viewport.width;
-        canvas.height = viewport.height;
-        const ctx = canvas.getContext('2d');
+// ─── 100% Pure Native Vector PDF Export (Zero JPEG Flattening) ──
+async function exportPureVectorPDF(basePdfBytes) {
+    const { PDFDocument, rgb, StandardFonts, degrees } = PDFLib;
+    const pdfDoc = await PDFDocument.load(basePdfBytes);
+    
+    // Embed standard core vector fonts (crisp at 1000% zoom, searchable text)
+    const helveticaFont = await pdfDoc.embedFont(StandardFonts.Helvetica);
+    const helveticaBold = await pdfDoc.embedFont(StandardFonts.HelveticaBold);
+    const helveticaOblique = await pdfDoc.embedFont(StandardFonts.HelveticaOblique);
+    const helveticaBoldOblique = await pdfDoc.embedFont(StandardFonts.HelveticaBoldOblique);
+    const timesFont = await pdfDoc.embedFont(StandardFonts.TimesRoman);
+    const courierFont = await pdfDoc.embedFont(StandardFonts.Courier);
 
-        // 1. Render PDF base layer
-        await page.render({ canvasContext: ctx, viewport }).promise;
+    const numPages = pdfDoc.getPageCount();
 
-        // 2. Render freehand drawings
-        const edits = pageEdits[i];
-        if (edits) {
-            if (edits.drawingDataUrl) {
-                const drawImg = await loadImage(edits.drawingDataUrl);
-                ctx.drawImage(drawImg, 0, 0, canvas.width, canvas.height);
-            }
+    for (let p = 1; p <= numPages; p++) {
+        const page = pdfDoc.getPage(p - 1);
+        const { width: pageW, height: pageH } = page.getSize();
+        const edits = pageEdits[p];
+        if (!edits) continue;
 
-            // 3. Render all annotations (whiteout, text, shapes, images)
-            const scaleFactor = renderScale / 1.0;
-            for (const el of (edits.elements || [])) {
-                if (el.type === 'whiteout') {
-                    ctx.fillStyle = '#ffffff';
-                    ctx.fillRect(el.x * scaleFactor, el.y * scaleFactor, el.width * scaleFactor, el.height * scaleFactor);
-                } else if (el.type === 'text') {
-                    drawTextOnCanvas(ctx, el, scaleFactor);
-                } else if (el.type === 'image') {
-                    const img = await loadImage(el.dataUrl);
-                    ctx.save();
-                    ctx.globalAlpha = el.opacity !== undefined ? el.opacity : 1.0;
-                    if (el.rotation) {
-                        const cx = (el.x + el.width / 2) * scaleFactor;
-                        const cy = (el.y + el.height / 2) * scaleFactor;
-                        ctx.translate(cx, cy);
-                        ctx.rotate((el.rotation * Math.PI) / 180);
-                        ctx.drawImage(img, (-el.width / 2) * scaleFactor, (-el.height / 2) * scaleFactor, el.width * scaleFactor, el.height * scaleFactor);
-                    } else {
-                        ctx.drawImage(img, el.x * scaleFactor, el.y * scaleFactor, el.width * scaleFactor, el.height * scaleFactor);
-                    }
-                    ctx.restore();
-                } else if (el.type === 'shape') {
-                    drawShapeOnCanvas(ctx, el, scaleFactor);
-                }
+        // 1. Freehand drawings: embed as transparent high-res PNG layer
+        if (edits.drawingDataUrl) {
+            try {
+                const pngBytes = await fetch(edits.drawingDataUrl).then(r => r.arrayBuffer());
+                const pngImage = await pdfDoc.embedPng(pngBytes);
+                page.drawImage(pngImage, {
+                    x: 0,
+                    y: 0,
+                    width: pageW,
+                    height: pageH
+                });
+            } catch (drawErr) {
+                console.warn('Drawing overlay note:', drawErr);
             }
         }
 
-        const blob = await new Promise(r => canvas.toBlob(r, 'image/jpeg', 0.94));
-        const imgBytes = new Uint8Array(await blob.arrayBuffer());
-        const embedded = await newPdfDoc.embedJpg(imgBytes);
+        // 2. Vector annotations & Whiteouts
+        for (const el of (edits.elements || [])) {
+            // If it's a detected original image that wasn't moved, skip (already in PDF)
+            if (el.isOriginalImage && !el.wasMoved) continue;
+            // If it's an original text that was handled by serverless TrueEdit redaction, skip
+            if (el.isTrueEdit && el.handledByServer) continue;
 
-        const origVp = page.getViewport({ scale: 1.0 });
-        const newPage = newPdfDoc.addPage([origVp.width, origVp.height]);
-        newPage.drawImage(embedded, { x: 0, y: 0, width: origVp.width, height: origVp.height });
-    }
-
-    const pdfBytes = await newPdfDoc.save();
-    return new Blob([pdfBytes], { type: 'application/pdf' });
-}
-
-async function renderRemainingAnnotationsOnTrueEdit(trueEditBytes) {
-    const tempDoc = await pdfjsLib.getDocument({ data: trueEditBytes }).promise;
-    const { PDFDocument } = PDFLib;
-    const newPdfDoc = await PDFDocument.create();
-
-    for (let i = 1; i <= tempDoc.numPages; i++) {
-        const pct = Math.round(50 + (i / tempDoc.numPages) * 40);
-        showProgress(pct, `Menggabungkan elemen lembar ${i} dari ${tempDoc.numPages}...`);
-
-        const page = await tempDoc.getPage(i);
-        const renderScale = 2.5;
-        const viewport = page.getViewport({ scale: renderScale });
-
-        const canvas = document.createElement('canvas');
-        canvas.width  = viewport.width;
-        canvas.height = viewport.height;
-        const ctx = canvas.getContext('2d');
-
-        // Render TrueEdited PDF page as base layer (TrueEdit vector edits are already embedded!)
-        await page.render({ canvasContext: ctx, viewport }).promise;
-
-        const edits = pageEdits[i];
-        if (edits) {
-            if (edits.drawingDataUrl) {
-                const drawImg = await loadImage(edits.drawingDataUrl);
-                ctx.drawImage(drawImg, 0, 0, canvas.width, canvas.height);
-            }
-
-            const scaleFactor = renderScale / 1.0;
-            for (const el of (edits.elements || [])) {
-                // Skip TrueEdit elements because they are ALREADY rendered in native vector
-                if (el.isTrueEdit) continue;
-
-                if (el.type === 'whiteout') {
-                    ctx.fillStyle = '#ffffff';
-                    ctx.fillRect(el.x * scaleFactor, el.y * scaleFactor, el.width * scaleFactor, el.height * scaleFactor);
-                } else if (el.type === 'text') {
-                    drawTextOnCanvas(ctx, el, scaleFactor);
-                } else if (el.type === 'image') {
-                    const img = await loadImage(el.dataUrl);
-                    ctx.save();
-                    ctx.globalAlpha = el.opacity !== undefined ? el.opacity : 1.0;
-                    if (el.rotation) {
-                        const cx = (el.x + el.width / 2) * scaleFactor;
-                        const cy = (el.y + el.height / 2) * scaleFactor;
-                        ctx.translate(cx, cy);
-                        ctx.rotate((el.rotation * Math.PI) / 180);
-                        ctx.drawImage(img, (-el.width / 2) * scaleFactor, (-el.height / 2) * scaleFactor, el.width * scaleFactor, el.height * scaleFactor);
-                    } else {
-                        ctx.drawImage(img, el.x * scaleFactor, el.y * scaleFactor, el.width * scaleFactor, el.height * scaleFactor);
-                    }
-                    ctx.restore();
-                } else if (el.type === 'shape') {
-                    drawShapeOnCanvas(ctx, el, scaleFactor);
+            if (el.type === 'whiteout') {
+                page.drawRectangle({
+                    x: el.x,
+                    y: pageH - (el.y + el.height),
+                    width: el.width,
+                    height: el.height,
+                    color: rgb(1, 1, 1),
+                    borderWidth: 0
+                });
+            } else if (el.type === 'text') {
+                if (el.hasBg) {
+                    page.drawRectangle({
+                        x: el.x,
+                        y: pageH - (el.y + el.height),
+                        width: el.width,
+                        height: el.height,
+                        color: rgb(1, 1, 1)
+                    });
                 }
+
+                let chosenFont = helveticaFont;
+                if (el.fontFamily && el.fontFamily.toLowerCase().includes('times')) {
+                    chosenFont = timesFont;
+                } else if (el.fontFamily && el.fontFamily.toLowerCase().includes('courier')) {
+                    chosenFont = courierFont;
+                } else {
+                    if (el.isBold && el.isItalic) chosenFont = helveticaBoldOblique;
+                    else if (el.isBold) chosenFont = helveticaBold;
+                    else if (el.isItalic) chosenFont = helveticaOblique;
+                    else chosenFont = helveticaFont;
+                }
+
+                const col = hexToRgb01(el.color || '#0f172a');
+                const fontSize = el.fontSize || 16;
+                const rawContent = el.content !== undefined ? String(el.content) : '';
+                const lines = rawContent.split('\n');
+                const lineHeight = fontSize * 1.25;
+
+                lines.forEach((line, lIdx) => {
+                    let lineWidth = 0;
+                    try { lineWidth = chosenFont.widthOfTextAtSize(line, fontSize); } catch (_) {}
+
+                    let textX = el.x + 4;
+                    if (el.align === 'center') {
+                        textX = el.x + Math.max(0, (el.width - lineWidth) / 2);
+                    } else if (el.align === 'right') {
+                        textX = el.x + Math.max(0, el.width - lineWidth - 4);
+                    }
+                    const textY = pageH - (el.y + 4 + (fontSize * 0.85) + (lIdx * lineHeight));
+
+                    page.drawText(line, {
+                        x: textX,
+                        y: textY,
+                        size: fontSize,
+                        font: chosenFont,
+                        color: rgb(col.r, col.g, col.b)
+                    });
+
+                    if (el.isUnderline && lineWidth > 0) {
+                        page.drawLine({
+                            start: { x: textX, y: textY - 2 },
+                            end: { x: textX + lineWidth, y: textY - 2 },
+                            thickness: Math.max(1, fontSize * 0.07),
+                            color: rgb(col.r, col.g, col.b)
+                        });
+                    }
+                });
+            } else if (el.type === 'image') {
+                try {
+                    let embeddedImg;
+                    if (el.dataUrl && el.dataUrl.startsWith('data:image/png')) {
+                        const bytes = await fetch(el.dataUrl).then(r => r.arrayBuffer());
+                        embeddedImg = await pdfDoc.embedPng(bytes);
+                    } else if (el.dataUrl) {
+                        const bytes = await fetch(el.dataUrl).then(r => r.arrayBuffer());
+                        embeddedImg = await pdfDoc.embedJpg(bytes);
+                    }
+                    if (embeddedImg) {
+                        page.drawImage(embeddedImg, {
+                            x: el.x,
+                            y: pageH - (el.y + el.height),
+                            width: el.width,
+                            height: el.height,
+                            opacity: el.opacity !== undefined ? el.opacity : 1.0,
+                            rotate: el.rotation ? degrees(-el.rotation) : undefined
+                        });
+                    }
+                } catch (imgErr) {
+                    console.warn('Image embedding note:', imgErr);
+                }
+            } else if (el.type === 'shape') {
+                drawShapeOnPdfLib(page, pageH, el, rgb);
             }
         }
-
-        const blob = await new Promise(r => canvas.toBlob(r, 'image/jpeg', 0.94));
-        const imgBytes = new Uint8Array(await blob.arrayBuffer());
-        const embedded = await newPdfDoc.embedJpg(imgBytes);
-
-        const origVp = page.getViewport({ scale: 1.0 });
-        const newPage = newPdfDoc.addPage([origVp.width, origVp.height]);
-        newPage.drawImage(embedded, { x: 0, y: 0, width: origVp.width, height: origVp.height });
     }
 
-    const pdfBytes = await newPdfDoc.save();
-    return new Blob([pdfBytes], { type: 'application/pdf' });
+    const finalBytes = await pdfDoc.save();
+    return new Blob([finalBytes], { type: 'application/pdf' });
 }
 
+// ─── Build Export PDF Blob (Stream Redactions + Pure Vector Overlays) ─
 async function buildExportPdfBlob() {
-    // 1. Check for TrueEdit elements
-    const trueEdits = [];
-    let hasNonTrueEdits = false;
+    const serverEdits = [];
+    let hasEditsRequiringServer = false;
 
     for (let p = 1; p <= totalPages; p++) {
         const pEdits = pageEdits[p];
         if (!pEdits) continue;
 
-        if (pEdits.drawingDataUrl) {
-            hasNonTrueEdits = true;
+        // 1. Collect deleted original text and images
+        if (pEdits.deletedElements && pEdits.deletedElements.length > 0) {
+            pEdits.deletedElements.forEach(delItem => {
+                serverEdits.push({
+                    page: p - 1,
+                    action: delItem.action, // 'delete_text' or 'delete_image'
+                    rect: delItem.rect,
+                    origText: delItem.origText,
+                    xref: delItem.xref
+                });
+                hasEditsRequiringServer = true;
+            });
         }
 
+        // 2. Collect moved/edited original texts and moved original images
         if (pEdits.elements && pEdits.elements.length > 0) {
             pEdits.elements.forEach(el => {
-                if (el.isTrueEdit) {
-                    const origR = el.origRect || [el.x, el.y, el.x + el.width, el.y + el.height];
+                if (el.isTrueEdit && el.origRect) {
+                    const origR = el.origRect;
                     const targetLeft = el.x + 4;
                     const targetTop  = el.y + 2;
                     const targetRight = targetLeft + (el.width ? el.width - 8 : (origR[2] - origR[0]));
                     const targetBottom = targetTop + (el.height || (origR[3] - origR[1]));
 
-                    trueEdits.push({
+                    serverEdits.push({
                         page: p - 1,
+                        action: 'edit_text',
                         rect: origR,
                         targetRect: [targetLeft, targetTop, targetRight, targetBottom],
                         newText: el.content || '',
@@ -1419,36 +1799,48 @@ async function buildExportPdfBlob() {
                         italic: !!el.isItalic,
                         useWhiteout: false
                     });
-                } else {
-                    hasNonTrueEdits = true;
+                    el.handledByServer = true;
+                    hasEditsRequiringServer = true;
+                } else if (el.isOriginalImage && el.origRect) {
+                    const origR = el.origRect;
+                    const isMoved = Math.abs(el.x - origR[0]) > 3 || Math.abs(el.y - origR[1]) > 3;
+                    if (isMoved) {
+                        el.wasMoved = true;
+                        serverEdits.push({
+                            page: p - 1,
+                            action: 'move_image',
+                            rect: origR,
+                            targetRect: [el.x, el.y, el.x + el.width, el.y + el.height],
+                            xref: el.origXref
+                        });
+                        hasEditsRequiringServer = true;
+                    }
                 }
             });
         }
     }
 
-    // 2. If TrueEdit elements exist, attempt serverless processing
-    if (trueEdits.length > 0 && pdfFile.size <= 4.2 * 1024 * 1024 && navigator.onLine !== false) {
+    let basePdfBytes = await pdfFile.arrayBuffer();
+
+    // If there are stream redactions / deletions / moves, call serverless PyMuPDF TrueEdit engine
+    if (hasEditsRequiringServer && pdfFile.size <= 4.2 * 1024 * 1024 && navigator.onLine !== false) {
         try {
-            showProgress(25, 'Menjalankan TrueEdit Engine di Vercel (Redaksi Stream Vektor)...');
-            const trueEditBytes = await callTrueEditEngine(pdfFile, trueEdits);
-
-            if (!hasNonTrueEdits) {
-                showProgress(90, 'TrueEdit Vector selesai sempurna!');
-                return new Blob([trueEditBytes], { type: 'application/pdf' });
-            }
-
-            showProgress(45, 'Menerapkan coretan & gambar ke dokumen TrueEdit...');
-            return await renderRemainingAnnotationsOnTrueEdit(trueEditBytes);
-
+            showProgress(35, 'Menjalankan TrueEdit Engine di Vercel (Hapus Teks/Gambar Asli & Vektor)...');
+            basePdfBytes = await callTrueEditEngine(pdfFile, serverEdits);
+            showProgress(70, 'Stream redaction & move berhasil...');
         } catch (err) {
-            console.warn('TrueEdit Engine fallback to High-DPI canvas:', err);
-            // Seamless fallback to High-DPI Canvas
+            console.warn('TrueEdit Engine server error, proceeding with vector overlay:', err);
+            for (let p = 1; p <= totalPages; p++) {
+                if (pageEdits[p]?.elements) {
+                    pageEdits[p].elements.forEach(el => { el.handledByServer = false; });
+                }
+            }
         }
     }
 
-    // 3. Fallback to client-side High-DPI canvas engine
-    showProgress(20, 'Merender dokumen dengan High-DPI Canvas Engine...');
-    return await renderDocumentViaCanvas();
+    // Export 100% Pure Vector PDF via PDFLib! ZERO JPEG FLATTENING!
+    showProgress(85, 'Menyusun dokumen Pure Vector PDF...');
+    return await exportPureVectorPDF(basePdfBytes);
 }
 
 async function saveEditedPDF() {
