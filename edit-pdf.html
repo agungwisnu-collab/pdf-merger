@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Edit Dokumen PDF — Tambah Teks, Gambar, Bentuk & Coretan PDF Online</title>
     <meta name="description" content="Edit dokumen PDF lengkap secara online dengan zoom, kustomisasi font, warna pena bebas, sisipkan foto dengan resize, serta tambahkan aneka bentuk (kotak, lingkaran, panah).">
-    <link rel="stylesheet" href="style.css?v=8">
+    <link rel="stylesheet" href="style.css?v=9">
     <script src="theme.js?v=8"></script>
     <script src="https://unpkg.com/pdf-lib@1.17.1/dist/pdf-lib.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
@@ -97,74 +97,78 @@
 
             <!-- Workspace Section -->
             <div id="workspaceSection" class="hidden">
-                <div class="file-section-header">
-                    <div>
-                        <h3 id="docTitle">📄 document.pdf</h3>
-                        <p id="docMeta" style="font-size: 0.8rem; color: var(--text-muted);">Memuat...</p>
-                    </div>
-                    <button class="btn btn-danger-outline btn-sm" onclick="clearFile()">🔄 Ganti Dokumen</button>
-                </div>
-
-                <!-- Advanced Editor Toolbar -->
+                <!-- Advanced Editor Toolbar (iLovePDF Style) -->
                 <div class="editor-main-panel">
                     <div class="editor-toolbar-box">
                         <!-- Top Toolbar Controls -->
-                        <div class="editor-toolbar-row">
-                            <!-- Tool Selector Buttons -->
-                            <div class="editor-tool-group">
-                                <button class="editor-btn active" id="toolSelectBtn" onclick="setActiveTool('select')" title="Pilih &amp; Geser Objek">
-                                    <span class="editor-btn-icon">👆</span><span>Pilih</span>
+                        <div class="ilove-toolbar-row">
+                            <!-- Left: File Info & Back/Change -->
+                            <div class="ilove-left-group">
+                                <button class="ilove-btn-back" onclick="clearFile()" title="Ganti File PDF">
+                                    <span style="font-size: 1.1rem; line-height: 1;">←</span>
+                                    <span>Ganti File</span>
                                 </button>
-                                <button class="editor-btn" id="toolTextBtn" onclick="setActiveTool('text')" title="Tambah Teks Baru">
-                                    <span class="editor-btn-icon">🔤</span><span>Tambah Teks</span>
-                                </button>
-                                <button class="editor-btn" id="toolReplaceTextBtn" onclick="setActiveTool('replaceText')" title="Ganti Teks Asli PDF dengan TrueEdit Vector Engine (Hapus teks dari stream tanpa merusak gambar latar)">
-                                    <span class="editor-btn-icon">📝</span><span>Ganti Teks <span class="badge-trueedit" style="font-size: 0.58rem; padding: 1px 5px; margin-left: 2px;">⚡ TrueEdit</span></span>
-                                </button>
-                                <button class="editor-btn" id="toolWhiteoutBtn" onclick="addWhiteoutBox()" title="Tip-Ex / Hapus Teks (Tutup dengan kotak putih)">
-                                    <span class="editor-btn-icon">⬜</span><span>Tip-Ex</span>
-                                </button>
-                                <button class="editor-btn" id="toolPenBtn" onclick="setActiveTool('pen')" title="Coret Pena Bebas">
-                                    <span class="editor-btn-icon">✏️</span><span>Pena</span>
-                                </button>
-                                <button class="editor-btn" id="toolHighlighterBtn" onclick="setActiveTool('highlighter')" title="Stabilo / Sorotan Warna">
-                                    <span class="editor-btn-icon">🖍️</span><span>Stabilo</span>
-                                </button>
-                                <button class="editor-btn" id="toolShapeBtn" onclick="setActiveTool('shape')" title="Tambah Bentuk (Kotak, Lingkaran, Panah)">
-                                    <span class="editor-btn-icon">🔷</span><span>Bentuk</span>
-                                </button>
-                                <button class="editor-btn" id="toolImageBtn" onclick="document.getElementById('imageAnnotationInput').click()" title="Sisipkan Gambar/Foto">
-                                    <span class="editor-btn-icon">🖼️</span><span>Foto</span>
-                                </button>
-                                <input type="file" id="imageAnnotationInput" accept="image/*" hidden onchange="handleImageInsert(this.files[0])" />
+                                <div class="ilove-doc-info">
+                                    <div id="docTitle" class="ilove-doc-title" title="document.pdf">📄 document.pdf</div>
+                                    <div id="docMeta" class="ilove-doc-meta">Memuat...</div>
+                                </div>
                             </div>
 
-                            <!-- History, Zoom & Page Navigation -->
-                            <div class="editor-tool-group">
-                                <!-- Undo / Redo -->
-                                <button class="editor-btn" id="undoBtn" onclick="undoAction()" title="Undo (Ctrl+Z)" disabled>
-                                    <span>↶</span>
+                            <!-- Center: 4 Primary Tools (iLovePDF Style) -->
+                            <div class="ilove-center-tools">
+                                <button class="ilove-tool-btn active" id="toolTextBtn" onclick="setActiveTool('text')" title="Tambah Teks / Edit Teks Dokumen">
+                                    <span class="ilove-tool-icon">🔤</span>
+                                    <span class="ilove-tool-name">Teks</span>
                                 </button>
-                                <button class="editor-btn" id="redoBtn" onclick="redoAction()" title="Redo (Ctrl+Y)" disabled>
-                                    <span>↷</span>
+                                <button class="ilove-tool-btn" id="toolImageBtn" onclick="document.getElementById('imageAnnotationInput').click()" title="Sisipkan Gambar/Foto">
+                                    <span class="ilove-tool-icon">🖼️</span>
+                                    <span class="ilove-tool-name">Gambar</span>
+                                </button>
+                                <input type="file" id="imageAnnotationInput" accept="image/*" hidden onchange="handleImageInsert(this.files[0])" />
+                                <button class="ilove-tool-btn" id="toolPenBtn" onclick="setActiveTool('pen')" title="Coret / Gambar Bebas">
+                                    <span class="ilove-tool-icon">✏️</span>
+                                    <span class="ilove-tool-name">Gambar Bebas</span>
+                                </button>
+                                <button class="ilove-tool-btn" id="toolShapeBtn" onclick="setActiveTool('shape')" title="Sisipkan Bentuk (Kotak, Lingkaran, Panah)">
+                                    <span class="ilove-tool-icon">🔷</span>
+                                    <span class="ilove-tool-name">Bentuk</span>
                                 </button>
 
+                                <!-- Hidden auxiliary buttons for script compatibility -->
+                                <button id="toolSelectBtn" style="display:none;" onclick="setActiveTool('select')"></button>
+                                <button id="toolReplaceTextBtn" style="display:none;" onclick="setActiveTool('replaceText')"></button>
+                                <button id="toolWhiteoutBtn" style="display:none;" onclick="addWhiteoutBox()"></button>
+                                <button id="toolHighlighterBtn" style="display:none;" onclick="setActiveTool('highlighter')"></button>
+                            </div>
+
+                            <!-- Right: Undo, Zoom, Page Navigation & iLovePDF Red CTA Button -->
+                            <div class="ilove-right-group">
+                                <!-- Undo / Redo -->
+                                <div class="ilove-history-wrap">
+                                    <button class="ilove-ctrl-btn" id="undoBtn" onclick="undoAction()" title="Undo (Ctrl+Z)" disabled>↶</button>
+                                    <button class="ilove-ctrl-btn" id="redoBtn" onclick="redoAction()" title="Redo (Ctrl+Y)" disabled>↷</button>
+                                </div>
+
                                 <!-- Zoom Pill -->
-                                <div class="editor-zoom-pill">
-                                    <button class="zoom-btn" onclick="zoomOut()" title="Perkecil (-)">−</button>
-                                    <span class="zoom-label" id="zoomDisplay" onclick="resetZoom()" title="Klik untuk reset 100%">100%</span>
-                                    <button class="zoom-btn" onclick="zoomIn()" title="Perbesar (+)">+</button>
-                                    <button class="zoom-btn" onclick="fitToWidth()" title="Pas Lebar Halaman" style="font-size: 0.72rem; padding: 0 4px; width: auto;">Fit</button>
+                                <div class="ilove-zoom-pill">
+                                    <button class="ilove-zoom-btn" onclick="zoomOut()" title="Perkecil (-)">−</button>
+                                    <span class="ilove-zoom-text" id="zoomDisplay" onclick="resetZoom()" title="Klik untuk reset 100%">100%</span>
+                                    <button class="ilove-zoom-btn" onclick="zoomIn()" title="Perbesar (+)">+</button>
+                                    <button class="ilove-zoom-btn fit-btn" onclick="fitToWidth()" title="Pas Lebar Halaman">Fit</button>
                                 </div>
 
                                 <!-- Page Navigation -->
-                                <div style="display: inline-flex; align-items: center; gap: 4px; background: var(--bg-subtle); padding: 2px 6px; border-radius: 10px; border: 1px solid var(--border-subtle);">
-                                    <button class="zoom-btn" onclick="prevPage()" title="Halaman Sebelumnya">◀</button>
-                                    <span id="pageNavText" style="font-weight: 700; font-size: 0.8rem; min-width: 58px; text-align: center;">1 / 1</span>
-                                    <button class="zoom-btn" onclick="nextPage()" title="Halaman Selanjutnya">▶</button>
+                                <div class="ilove-page-pill">
+                                    <button class="ilove-zoom-btn" onclick="prevPage()" title="Halaman Sebelumnya">◀</button>
+                                    <span id="pageNavText" class="ilove-page-text">1 / 1</span>
+                                    <button class="ilove-zoom-btn" onclick="nextPage()" title="Halaman Selanjutnya">▶</button>
                                 </div>
 
-                                <button class="btn btn-danger-outline btn-sm" onclick="clearCurrentPageAnnotations()" title="Hapus seluruh editan di halaman ini">🗑️ Reset</button>
+                                <!-- Red iLovePDF Action Button -->
+                                <button class="ilove-red-btn" id="topSaveBtn" onclick="saveEditedPDF()" title="Simpan perubahan dan download PDF">
+                                    <span>Unduh PDF</span>
+                                    <span style="font-size: 1.1rem; line-height: 1;">➔</span>
+                                </button>
                             </div>
                         </div>
 
@@ -386,6 +390,6 @@
 
     <script src="gdrive-config.js?v=4"></script>
     <script src="gdrive-picker.js?v=4"></script>
-    <script src="edit-pdf.js?v=8"></script>
+    <script src="edit-pdf.js?v=9"></script>
 </body>
 </html>

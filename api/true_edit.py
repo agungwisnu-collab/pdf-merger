@@ -149,10 +149,10 @@ def process_true_edit(pdf_bytes, edits):
             font_size = float(edit.get("fontSize", 14))
             color = parse_color(edit.get("color", "#0f172a"))
 
-            # Calculate precise baseline for single or multi-line text
+            # Calculate precise baseline for single or multi-line text (zero-shift alignment)
             lines = new_text.split('\n')
             line_height = font_size * 1.25
-            baseline_y0 = target_rect.y0 + (font_size * 0.88)
+            baseline_y0 = target_rect.y0 + (font_size * 0.82)
 
             for i, line in enumerate(lines):
                 page.insert_text(

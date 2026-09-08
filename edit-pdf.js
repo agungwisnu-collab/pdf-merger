@@ -19,6 +19,7 @@ let totalPages        = 1;
 let currentZoom       = 1.0;
 let activeTool        = 'select'; // 'select' | 'text' | 'replaceText' | 'whiteout' | 'pen' | 'highlighter' | 'shape' | 'image'
 let selectedElementId = null;
+let pageDpr           = 1; // High-DPI screen pixel ratio for crisp rendering
 
 // Page Edits Store: { [pageNum]: { elements: [], deletedElements: [], drawingDataUrl: '' } }
 let pageEdits = {};
@@ -393,19 +394,20 @@ function eraseRectFromBgCanvas(rect) {
     const bgCanvas = document.getElementById('pdfBgCanvas');
     if (!bgCanvas) return;
     const ctx = bgCanvas.getContext('2d');
-    const pad = 2;
-    const x = Math.max(0, Math.floor(rect[0] - pad));
-    const y = Math.max(0, Math.floor(rect[1] - pad));
-    const w = Math.min(bgCanvas.width - x, Math.ceil((rect[2] - rect[0]) + pad * 2));
-    const h = Math.min(bgCanvas.height - y, Math.ceil((rect[3] - rect[1]) + pad * 2));
+    const dpr = pageDpr || 1;
+    const pad = 1.5 * dpr;
+    const x = Math.max(0, Math.floor(rect[0] * dpr - pad));
+    const y = Math.max(0, Math.floor(rect[1] * dpr - pad));
+    const w = Math.min(bgCanvas.width - x, Math.ceil((rect[2] - rect[0]) * dpr + pad * 2));
+    const h = Math.min(bgCanvas.height - y, Math.ceil((rect[3] - rect[1]) * dpr + pad * 2));
 
     if (w <= 0 || h <= 0) return;
 
     // Sample surrounding background color just outside the rect
     let fillColor = '#ffffff';
     try {
-        const sampleX = Math.max(0, x - 2);
-        const sampleY = Math.max(0, y - 2);
+        const sampleX = Math.max(0, x - Math.round(2 * dpr));
+        const sampleY = Math.max(0, y - Math.round(2 * dpr));
         const pixel = ctx.getImageData(sampleX, sampleY, 1, 1).data;
         if (pixel[3] > 0) {
             fillColor = `rgb(${pixel[0]}, ${pixel[1]}, ${pixel[2]})`;
@@ -424,12 +426,20 @@ async function renderCurrentPage() {
     const page = await pdfDocJs.getPage(currentPage);
     const baseViewport = page.getViewport({ scale: 1.0 });
 
-    // 1. Render Base PDF Canvas
+    // 1. Render Base PDF Canvas at High-DPI (Crisp, zero-blur preview like genuine printed document)
+    const dpr = Math.max(2, window.devicePixelRatio || 1);
+    pageDpr = dpr;
     const bgCanvas = document.getElementById('pdfBgCanvas');
-    bgCanvas.width  = baseViewport.width;
-    bgCanvas.height = baseViewport.height;
+    bgCanvas.width  = Math.round(baseViewport.width * dpr);
+    bgCanvas.height = Math.round(baseViewport.height * dpr);
+    bgCanvas.style.width  = `${baseViewport.width}px`;
+    bgCanvas.style.height = `${baseViewport.height}px`;
+
+    const renderViewport = page.getViewport({ scale: dpr });
     const bgCtx = bgCanvas.getContext('2d');
-    await page.render({ canvasContext: bgCtx, viewport: baseViewport }).promise;
+    bgCtx.imageSmoothingEnabled = true;
+    bgCtx.imageSmoothingQuality = 'high';
+    await page.render({ canvasContext: bgCtx, viewport: renderViewport }).promise;
 
     // 2. Erase any deleted elements from bgCanvas!
     if (pageEdits[currentPage]?.deletedElements) {
@@ -587,19 +597,24 @@ function renderDetectedImagesForCurrentPage() {
         const isAdded = existingElements.some(el => el.origXref === img.xref || el.id === `orig_img_${currentPage}_${idx}`);
         if (isDeleted || isAdded) return;
 
+        const dpr = pageDpr || 1;
         const rect = img.rect; // [x0, y0, x1, y1]
         const x = Math.max(0, Math.floor(rect[0]));
         const y = Math.max(0, Math.floor(rect[1]));
-        const w = Math.max(16, Math.min(bgCanvas.width - x, Math.ceil(rect[2] - rect[0])));
-        const h = Math.max(16, Math.min(bgCanvas.height - y, Math.ceil(rect[3] - rect[1])));
+        const w = Math.max(16, Math.ceil(rect[2] - rect[0]));
+        const h = Math.max(16, Math.ceil(rect[3] - rect[1]));
 
-        // Extract image pixels from canvas into real image element
+        // Extract image pixels from canvas into real image element at HiDPI resolution
         let dataUrl = '';
         try {
-            const imgData = ctx.getImageData(x, y, w, h);
+            const canvasX = Math.round(x * dpr);
+            const canvasY = Math.round(y * dpr);
+            const canvasW = Math.min(bgCanvas.width - canvasX, Math.round(w * dpr));
+            const canvasH = Math.min(bgCanvas.height - canvasY, Math.round(h * dpr));
+            const imgData = ctx.getImageData(canvasX, canvasY, canvasW, canvasH);
             const tempCanvas = document.createElement('canvas');
-            tempCanvas.width = w;
-            tempCanvas.height = h;
+            tempCanvas.width = canvasW;
+            tempCanvas.height = canvasH;
             tempCanvas.getContext('2d').putImageData(imgData, 0, 0);
             dataUrl = tempCanvas.toDataURL('image/png');
         } catch (err) {
@@ -1910,15 +1925,13 @@ async function exportPureVectorPDF(basePdfBytes) {
                     let lineWidth = 0;
                     try { lineWidth = chosenFont.widthOfTextAtSize(line, fontSize); } catch (_) {}
 
-                    const padX = el.hasBg ? 4 : 0;
-                    const padY = el.hasBg ? 4 : 0;
-                    let textX = el.x + padX;
+                    let textX = el.x;
                     if (el.align === 'center') {
                         textX = el.x + Math.max(0, (el.width - lineWidth) / 2);
                     } else if (el.align === 'right') {
-                        textX = el.x + Math.max(0, el.width - lineWidth - padX);
+                        textX = el.x + Math.max(0, el.width - lineWidth);
                     }
-                    const textY = pageH - (el.y + padY + (fontSize * 0.85) + (lIdx * lineHeight));
+                    const textY = pageH - (el.y + (fontSize * 0.82) + (lIdx * lineHeight));
 
                     page.drawText(line, {
                         x: textX,
@@ -1998,9 +2011,9 @@ async function buildExportPdfBlob() {
             pEdits.elements.forEach(el => {
                 if (el.isTrueEdit && el.origRect) {
                     const origR = el.origRect;
-                    const targetLeft = el.x + 4;
-                    const targetTop  = el.y + 2;
-                    const targetRight = targetLeft + (el.width ? el.width - 8 : (origR[2] - origR[0]));
+                    const targetLeft = el.x;
+                    const targetTop  = el.y;
+                    const targetRight = targetLeft + (el.width || (origR[2] - origR[0]));
                     const targetBottom = targetTop + (el.height || (origR[3] - origR[1]));
 
                     serverEdits.push({
@@ -2067,7 +2080,9 @@ async function saveEditedPDF() {
     const rawName = document.getElementById('outputName').value.trim() || 'edited_document';
     const outputName = (rawName.endsWith('.pdf') ? rawName : rawName + '.pdf');
     const saveBtn = document.getElementById('saveBtn');
-    saveBtn.disabled = true;
+    const topSaveBtn = document.getElementById('topSaveBtn');
+    if (saveBtn) saveBtn.disabled = true;
+    if (topSaveBtn) topSaveBtn.disabled = true;
 
     try {
         const finalBlob = await buildExportPdfBlob();
@@ -2088,7 +2103,8 @@ async function saveEditedPDF() {
         hideProgress();
         showStatus('❌ Error saat menyimpan edit: ' + err.message, 'error');
     } finally {
-        saveBtn.disabled = false;
+        if (saveBtn) saveBtn.disabled = false;
+        if (topSaveBtn) topSaveBtn.disabled = false;
     }
 }
 
@@ -2099,8 +2115,10 @@ async function saveEditedToGDrive() {
     const rawName = document.getElementById('outputName').value.trim() || 'edited_document';
     const outputName = (rawName.endsWith('.pdf') ? rawName : rawName + '.pdf');
     const saveBtn = document.getElementById('saveBtn');
+    const topSaveBtn = document.getElementById('topSaveBtn');
     const gdriveBtn = document.getElementById('saveGDriveBtn');
-    saveBtn.disabled = true;
+    if (saveBtn) saveBtn.disabled = true;
+    if (topSaveBtn) topSaveBtn.disabled = true;
     if (gdriveBtn) gdriveBtn.disabled = true;
 
     try {
@@ -2128,7 +2146,8 @@ async function saveEditedToGDrive() {
         hideProgress();
         showStatus('❌ Error: ' + err.message, 'error');
     } finally {
-        saveBtn.disabled = false;
+        if (saveBtn) saveBtn.disabled = false;
+        if (topSaveBtn) topSaveBtn.disabled = false;
         if (gdriveBtn) gdriveBtn.disabled = false;
     }
 }
@@ -2156,12 +2175,10 @@ function drawTextOnCanvas(ctx, el, scaleFactor) {
         if (m.width > maxLineWidth) maxLineWidth = m.width;
     });
 
-    const padLeft = 4 * scaleFactor;
-    const padTop  = 2 * scaleFactor;
     const totalTextH = Math.max(lines.length * lineHeight, (fontSizePx + 4) * scaleFactor);
 
-    const boxW = el.width ? (el.width * scaleFactor) : (maxLineWidth + (padLeft * 2));
-    const boxH = el.height ? (el.height * scaleFactor) : (totalTextH + (padTop * 2));
+    const boxW = el.width ? (el.width * scaleFactor) : maxLineWidth;
+    const boxH = el.height ? (el.height * scaleFactor) : totalTextH;
 
     // If Whiteout or Background is enabled, draw crisp white rect
     if (el.hasBg) {
@@ -2171,11 +2188,17 @@ function drawTextOnCanvas(ctx, el, scaleFactor) {
 
     ctx.fillStyle = el.color || '#0f172a';
     
-    // Exact baseline offset: padding-top (2px) + font baseline (0.92 * fontSize)
-    const baselineOffset = (2 + (fontSizePx * 0.92)) * scaleFactor;
+    // Exact baseline offset: font baseline (0.82 * fontSize)
+    const baselineOffset = (fontSizePx * 0.82) * scaleFactor;
     
     lines.forEach((line, idx) => {
-        ctx.fillText(line, (el.x * scaleFactor) + padLeft, (el.y * scaleFactor) + baselineOffset + (idx * lineHeight));
+        let textX = el.x * scaleFactor;
+        if (el.align === 'center') {
+            textX = (el.x * scaleFactor) + Math.max(0, (boxW - (ctx.measureText(line).width)) / 2);
+        } else if (el.align === 'right') {
+            textX = (el.x * scaleFactor) + Math.max(0, boxW - (ctx.measureText(line).width));
+        }
+        ctx.fillText(line, textX, (el.y * scaleFactor) + baselineOffset + (idx * lineHeight));
     });
 
     ctx.restore();

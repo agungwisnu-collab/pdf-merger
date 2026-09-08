@@ -2377,6 +2377,262 @@ body {
     gap: 10px;
 }
 
+/* ==================== iLovePDF UI & Toolbar Redesign ==================== */
+.ilove-toolbar-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    padding: 6px 4px;
+    flex-wrap: wrap;
+}
+
+/* Left Group: File Info & Back */
+.ilove-left-group {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    min-width: 200px;
+}
+
+.ilove-btn-back {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 7px 12px;
+    background: var(--bg-subtle);
+    border: 1px solid var(--border-subtle);
+    border-radius: 8px;
+    color: var(--text-main);
+    font-size: 0.82rem;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all 0.15s ease;
+}
+
+.ilove-btn-back:hover {
+    background: var(--danger-light);
+    color: var(--danger);
+    border-color: var(--danger);
+}
+
+.ilove-doc-info {
+    display: flex;
+    flex-direction: column;
+    max-width: 170px;
+    overflow: hidden;
+}
+
+.ilove-doc-title {
+    font-size: 0.88rem;
+    font-weight: 700;
+    color: var(--text-main);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.ilove-doc-meta {
+    font-size: 0.74rem;
+    color: var(--text-muted);
+}
+
+/* Center Tools: The 4 Core Tools (iLovePDF Clean Tabs) */
+.ilove-center-tools {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    background: var(--bg-subtle);
+    padding: 4px 6px;
+    border-radius: 12px;
+    border: 1px solid var(--border-subtle);
+}
+
+.ilove-tool-btn {
+    display: inline-flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 3px;
+    min-width: 68px;
+    padding: 6px 12px;
+    border-radius: 8px;
+    background: transparent;
+    border: 1px solid transparent;
+    color: var(--text-muted);
+    font-family: inherit;
+    cursor: pointer;
+    transition: all 0.18s cubic-bezier(0.4, 0, 0.2, 1);
+    user-select: none;
+}
+
+.ilove-tool-icon {
+    font-size: 1.15rem;
+    line-height: 1;
+}
+
+.ilove-tool-name {
+    font-size: 0.75rem;
+    font-weight: 700;
+    letter-spacing: 0.01em;
+}
+
+.ilove-tool-btn:hover {
+    background: var(--bg-card);
+    color: var(--text-main);
+    border-color: var(--border-subtle);
+    transform: translateY(-1px);
+}
+
+.ilove-tool-btn.active {
+    background: #ffffff;
+    color: var(--primary);
+    border-color: rgba(99, 102, 241, 0.3);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+}
+
+[data-theme="dark"] .ilove-tool-btn.active {
+    background: var(--bg-card);
+    color: var(--primary);
+    border-color: var(--primary);
+}
+
+/* Right Group: Undo, Zoom, Page Nav & iLovePDF Red CTA */
+.ilove-right-group {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+
+.ilove-history-wrap {
+    display: inline-flex;
+    align-items: center;
+    gap: 2px;
+    background: var(--bg-subtle);
+    padding: 3px;
+    border-radius: 8px;
+    border: 1px solid var(--border-subtle);
+}
+
+.ilove-ctrl-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 30px;
+    height: 30px;
+    border-radius: 6px;
+    border: none;
+    background: transparent;
+    color: var(--text-main);
+    font-size: 1.1rem;
+    font-weight: 700;
+    cursor: pointer;
+    transition: background 0.15s, color 0.15s;
+}
+
+.ilove-ctrl-btn:hover:not(:disabled) {
+    background: var(--bg-card);
+    color: var(--primary);
+}
+
+.ilove-ctrl-btn:disabled {
+    opacity: 0.35;
+    cursor: not-allowed;
+}
+
+.ilove-zoom-pill,
+.ilove-page-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 3px;
+    background: var(--bg-subtle);
+    padding: 3px 6px;
+    border-radius: 8px;
+    border: 1px solid var(--border-subtle);
+}
+
+.ilove-zoom-btn {
+    width: 26px;
+    height: 26px;
+    border-radius: 6px;
+    border: none;
+    background: transparent;
+    color: var(--text-main);
+    font-size: 0.92rem;
+    font-weight: 700;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.15s;
+}
+
+.ilove-zoom-btn:hover {
+    background: var(--bg-card);
+    color: var(--primary);
+}
+
+.ilove-zoom-btn.fit-btn {
+    width: auto;
+    padding: 0 6px;
+    font-size: 0.72rem;
+}
+
+.ilove-zoom-text {
+    font-size: 0.78rem;
+    font-weight: 700;
+    color: var(--text-main);
+    min-width: 44px;
+    text-align: center;
+    cursor: pointer;
+}
+
+.ilove-page-text {
+    font-size: 0.78rem;
+    font-weight: 700;
+    color: var(--text-main);
+    min-width: 48px;
+    text-align: center;
+}
+
+/* Big Red iLovePDF Signature Action Button */
+.ilove-red-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 18px;
+    background: #e5322d;
+    color: #ffffff !important;
+    border: none;
+    border-radius: 8px;
+    font-size: 0.92rem;
+    font-weight: 800;
+    font-family: inherit;
+    cursor: pointer;
+    box-shadow: 0 4px 14px rgba(229, 50, 45, 0.35);
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+    letter-spacing: 0.01em;
+}
+
+.ilove-red-btn:hover {
+    background: #c62828;
+    transform: translateY(-1px);
+    box-shadow: 0 6px 18px rgba(229, 50, 45, 0.45);
+}
+
+.ilove-red-btn:active {
+    transform: translateY(1px);
+    box-shadow: 0 2px 8px rgba(229, 50, 45, 0.3);
+}
+
+.ilove-red-btn:disabled {
+    background: #94a3b8;
+    box-shadow: none;
+    cursor: not-allowed;
+    transform: none;
+}
+
 .editor-toolbar-row {
     display: flex;
     align-items: center;
@@ -2532,33 +2788,43 @@ body {
     border-color: var(--primary);
 }
 
-/* Canvas Viewport */
+/* Canvas Viewport: Neutral Clean Desk Background */
 .editor-viewport-wrapper {
-    background: #0f172a;
-    border-radius: 16px;
-    padding: 24px 16px;
-    box-shadow: inset 0 2px 8px rgba(0, 0, 0, 0.4);
+    background: #eaebef;
+    border: 1px solid var(--border-subtle);
+    border-radius: 12px;
+    padding: 32px 20px;
+    box-shadow: inset 0 2px 6px rgba(0, 0, 0, 0.05);
     overflow: auto;
-    max-height: 72vh;
+    max-height: 75vh;
     display: flex;
     justify-content: center;
     align-items: flex-start;
     position: relative;
 }
 
+[data-theme="dark"] .editor-viewport-wrapper {
+    background: #181c27;
+    box-shadow: inset 0 2px 8px rgba(0, 0, 0, 0.4);
+}
+
+/* Genuine Paper Document Appearance with Authentic Depth & Crisp Edges */
 .editor-canvas-stage {
     position: relative;
     display: inline-block;
-    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
-    background: white;
-    border-radius: 4px;
+    background: #ffffff;
+    border-radius: 2px;
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 10px 25px -5px rgba(0, 0, 0, 0.15), 0 0 1px rgba(0, 0, 0, 0.2);
     transform-origin: top center;
     transition: transform 0.15s ease-out;
 }
 
 #pdfBgCanvas {
     display: block;
-    border-radius: 4px;
+    border-radius: 2px;
+    background: #ffffff;
+    image-rendering: -webkit-optimize-contrast;
+    image-rendering: crisp-edges;
 }
 
 /* Interactive Text Layer for Detecting & Replacing Existing PDF Text */
