@@ -215,6 +215,8 @@ async function handleFileSelect(file) {
         document.getElementById('docMeta').textContent = `${totalPages} Halaman · ${formatSize(file.size)}`;
         document.getElementById('uploadSection').classList.add('hidden');
         document.getElementById('workspaceSection').classList.remove('hidden');
+        document.getElementById('mainWrapper')?.classList.add('workspace-active');
+        document.getElementById('mainContainer')?.classList.add('workspace-active');
 
         setActiveTool('select');
         await renderCurrentPage();
@@ -236,6 +238,8 @@ function clearFile() {
     redoStack   = [];
     document.getElementById('workspaceSection').classList.add('hidden');
     document.getElementById('uploadSection').classList.remove('hidden');
+    document.getElementById('mainWrapper')?.classList.remove('workspace-active');
+    document.getElementById('mainContainer')?.classList.remove('workspace-active');
     hideStatus();
     hideProgress();
 }
@@ -2273,12 +2277,10 @@ async function saveEditedPDF() {
     if (!pdfFile || !pdfDocJs) return;
     saveCurrentPageEdits();
 
-    const rawName = document.getElementById('outputName').value.trim() || 'edited_document';
+    const rawName = (document.getElementById('outputNameSidebar')?.value || document.getElementById('outputName')?.value || 'edited_document').trim();
     const outputName = (rawName.endsWith('.pdf') ? rawName : rawName + '.pdf');
-    const saveBtn = document.getElementById('saveBtn');
-    const topSaveBtn = document.getElementById('topSaveBtn');
-    if (saveBtn) saveBtn.disabled = true;
-    if (topSaveBtn) topSaveBtn.disabled = true;
+    const processBtn = document.getElementById('rightProcessTaskBtn');
+    if (processBtn) processBtn.disabled = true;
 
     try {
         const finalBlob = await buildExportPdfBlob();
@@ -2299,8 +2301,7 @@ async function saveEditedPDF() {
         hideProgress();
         showStatus('❌ Error saat menyimpan edit: ' + err.message, 'error');
     } finally {
-        if (saveBtn) saveBtn.disabled = false;
-        if (topSaveBtn) topSaveBtn.disabled = false;
+        if (processBtn) processBtn.disabled = false;
     }
 }
 
@@ -2308,14 +2309,10 @@ async function saveEditedToGDrive() {
     if (!pdfFile || !pdfDocJs) return;
     saveCurrentPageEdits();
 
-    const rawName = document.getElementById('outputName').value.trim() || 'edited_document';
+    const rawName = (document.getElementById('outputNameSidebar')?.value || document.getElementById('outputName')?.value || 'edited_document').trim();
     const outputName = (rawName.endsWith('.pdf') ? rawName : rawName + '.pdf');
-    const saveBtn = document.getElementById('saveBtn');
-    const topSaveBtn = document.getElementById('topSaveBtn');
-    const gdriveBtn = document.getElementById('saveGDriveBtn');
-    if (saveBtn) saveBtn.disabled = true;
-    if (topSaveBtn) topSaveBtn.disabled = true;
-    if (gdriveBtn) gdriveBtn.disabled = true;
+    const processBtn = document.getElementById('rightProcessTaskBtn');
+    if (processBtn) processBtn.disabled = true;
 
     try {
         const finalBlob = await buildExportPdfBlob();
@@ -2342,9 +2339,7 @@ async function saveEditedToGDrive() {
         hideProgress();
         showStatus('❌ Error: ' + err.message, 'error');
     } finally {
-        if (saveBtn) saveBtn.disabled = false;
-        if (topSaveBtn) topSaveBtn.disabled = false;
-        if (gdriveBtn) gdriveBtn.disabled = false;
+        if (processBtn) processBtn.disabled = false;
     }
 }
 

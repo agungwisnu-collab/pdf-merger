@@ -2795,9 +2795,6 @@ body {
     min-width: 0;
     display: flex;
     flex-direction: column;
-    height: 75vh;
-    max-height: 75vh;
-    min-height: 600px;
     overflow: hidden;
 }
 
@@ -2816,6 +2813,8 @@ body {
     justify-content: center;
     align-items: flex-start;
     position: relative;
+    /* Ensure left side content is always visible */
+    scroll-behavior: smooth;
 }
 
 [data-theme="dark"] .editor-viewport-wrapper {
@@ -3315,6 +3314,43 @@ body {
 }
 
 /* ============================================================
+   Full-Width Workspace Layout (iLovePDF Style)
+   When editor workspace is active, break out of narrow container
+   ============================================================ */
+.edit-pdf-main {
+    max-width: 100% !important;
+    padding: 0 !important;
+    transition: max-width 0.3s ease;
+}
+
+.edit-pdf-main.workspace-active {
+    max-width: 100% !important;
+    padding: 0 !important;
+}
+
+.edit-pdf-container {
+    max-width: 1100px;
+    transition: max-width 0.3s ease;
+}
+
+.edit-pdf-container.workspace-active {
+    max-width: 100% !important;
+    padding: 0 16px !important;
+}
+
+/* Hide header and upload section when workspace is active */
+.workspace-active .header,
+.workspace-active .upload-area,
+.workspace-active .footer {
+    display: none;
+}
+
+/* The fullwidth workspace itself */
+.editor-fullwidth-workspace {
+    width: 100%;
+}
+
+/* ============================================================
    iLovePDF-Grade Sidebar & Workspace Layout
    ============================================================ */
 .editor-workspace-body {
@@ -3326,6 +3362,7 @@ body {
     border-radius: 12px;
     overflow: hidden;
     min-height: 600px;
+    height: calc(100vh - 180px);
     box-shadow: 0 8px 30px rgba(0, 0, 0, 0.04);
 }
 
@@ -3359,7 +3396,6 @@ body {
     display: flex;
     flex-direction: column;
     gap: 12px;
-    max-height: 720px;
 }
 
 .sidebar-pages-list::-webkit-scrollbar {
@@ -3524,7 +3560,6 @@ body {
     display: flex;
     flex-direction: column;
     height: 100%;
-    min-height: 600px;
 }
 
 .right-sidebar-header {
