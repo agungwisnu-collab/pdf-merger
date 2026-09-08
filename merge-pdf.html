@@ -108,40 +108,6 @@
                 <ul id="fileList"></ul>
             </div>
 
-            <!-- Visual Page Range Modal -->
-            <div id="pageModal" class="page-modal hidden">
-                <div class="page-modal-backdrop" onclick="closePageModal()"></div>
-                <div class="page-modal-box">
-                    <div class="page-modal-header">
-                        <div>
-                            <h3 id="modalDocTitle">Pilih Halaman: nama_file.pdf</h3>
-                            <p id="modalDocSub" class="modal-doc-sub">Memuat thumbnail halaman...</p>
-                        </div>
-                        <button class="page-modal-close" onclick="closePageModal()">✕</button>
-                    </div>
-
-                    <div class="page-modal-toolbar">
-                        <button class="btn btn-small btn-primary" onclick="modalSelectAll()">Pilih Semua</button>
-                        <button class="btn btn-small btn-secondary-sm" onclick="modalDeselectAll()">Batal Pilih Semua</button>
-                        <button class="btn btn-small btn-secondary-sm" onclick="modalInvertSelection()">Balik Pilihan</button>
-                        <div class="page-range-input-wrap">
-                            <label for="modalRangeInput">Input Rentang:</label>
-                            <input type="text" id="modalRangeInput" class="page-range-input" placeholder="cth: 1-3, 5, 8" oninput="onModalRangeInput(this.value)">
-                        </div>
-                    </div>
-
-                    <div id="modalPageGrid" class="modal-page-grid"></div>
-
-                    <div class="page-modal-footer">
-                        <span id="modalSelectedCount" class="modal-selected-count">0 halaman dipilih</span>
-                        <div class="page-modal-footer-btns">
-                            <button class="btn btn-secondary-sm" onclick="closePageModal()">Batal</button>
-                            <button class="btn btn-success btn-small" onclick="savePageSelection()">Simpan Pilihan</button>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
             <!-- Output Section -->
             <div id="outputSection" class="output-section hidden">
                 <label for="outputName">💾 Nama file output:</label>

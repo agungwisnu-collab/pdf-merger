@@ -133,7 +133,8 @@
             const cards = section.querySelectorAll('.hub-tool-card');
             let sectionVisibleCount = 0;
 
-            const categoryMatches = currentCategory === 'all' || secCat === currentCategory;
+            // Jika sedang mencari (query ada), cari di semua kategori. Jika kosong, filter sesuai kategori aktif
+            const categoryMatches = !query ? (currentCategory === 'all' || secCat === currentCategory) : true;
 
             cards.forEach(card => {
                 const cardKeywords = (card.getAttribute('data-keywords') || '').toLowerCase();

@@ -400,6 +400,14 @@ function removeFile(index) {
     renderFileList();
 }
 
+// ─── Clear All Files ───────────────────────────────────────────
+function clearAll() {
+    pdfItems = [];
+    const fileInput = document.getElementById('fileInput');
+    if (fileInput) fileInput.value = '';
+    renderFileList();
+}
+
 // ─── Drag & Drop Reorder ───────────────────────────────────────
 function onDragStart(e, index) {
     dragSrcIndex = index;
@@ -510,6 +518,10 @@ async function mergePdfs() {
         if (gdriveBtn) gdriveBtn.disabled = !isReady;
     }
 }
+
+// Alias untuk kompatibilitas pemanggilan mergePDFs / mergePdfs
+const mergePDFs = mergePdfs;
+window.mergePDFs = mergePdfs;
 
 // ─── Merge & Save Directly to Google Drive ─────────────────────
 async function mergeAndSaveToGDrive() {

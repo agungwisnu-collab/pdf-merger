@@ -389,6 +389,10 @@
 
     <script>
         function setQuickSearch(keyword) {
+            const allPill = document.querySelector('.category-pill');
+            if (window.setCategoryFilter && allPill) {
+                window.setCategoryFilter('all', allPill);
+            }
             const input = document.getElementById('toolSearchInput');
             if (input) {
                 input.value = keyword;

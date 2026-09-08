@@ -168,7 +168,6 @@ async function compressAndDownload() {
 async function compressAndSaveToGDrive() {
     if (!pdfDocJs || !pdfFile) return;
 
-    const compLevel = currentLevel;
     const rawName = document.getElementById('outputName').value.trim() || 'compressed_document';
     const outputName = (rawName.endsWith('.pdf') ? rawName : rawName + '.pdf');
 

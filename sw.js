@@ -2,7 +2,7 @@
  *  sw.js — Service Worker for Offline PWA Support
  * ============================================================ */
 
-const CACHE_NAME = 'pdf-flow-v9';
+const CACHE_NAME = 'pdf-flow-v10';
 const ASSETS_TO_CACHE = [
     './',
     './index.html',
@@ -69,9 +69,9 @@ self.addEventListener('activate', (e) => {
 });
 
 self.addEventListener('fetch', (e) => {
-    // Cache first, fallback to network
+    // Cache first, fallback to network (ignore query string for versioned assets)
     e.respondWith(
-        caches.match(e.request).then((cachedResponse) => {
+        caches.match(e.request, { ignoreSearch: true }).then((cachedResponse) => {
             return cachedResponse || fetch(e.request).then((networkResponse) => {
                 return networkResponse;
             }).catch(() => {
