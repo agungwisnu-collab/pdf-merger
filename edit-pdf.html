@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Edit Dokumen PDF — Tambah Teks, Gambar, Bentuk & Coretan PDF Online</title>
     <meta name="description" content="Edit dokumen PDF lengkap secara online dengan zoom, kustomisasi font, warna pena bebas, sisipkan foto dengan resize, serta tambahkan aneka bentuk (kotak, lingkaran, panah).">
-    <link rel="stylesheet" href="style.css?v=11">
+    <link rel="stylesheet" href="style.css?v=12">
     <script src="theme.js?v=8"></script>
     <script src="https://unpkg.com/pdf-lib@1.17.1/dist/pdf-lib.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
@@ -347,9 +347,22 @@
                             <div class="editor-viewport-wrapper" id="editorViewport">
                                 <div class="editor-canvas-stage" id="canvasStage">
                                     <canvas id="pdfBgCanvas"></canvas>
-                                    <div id="pdfTextLayer" class="pdf-text-layer"></div>
+                                    <div id="pdfTextLayer" class="pdf-text-layer active"></div>
                                     <canvas id="drawingCanvas"></canvas>
                                     <div id="annotationOverlay"></div>
+
+                                    <!-- Floating Action Card (iLovePDF Style: Edit & Delete) -->
+                                    <div id="annoActionCard" class="anno-action-card hidden">
+                                        <button type="button" class="action-card-btn action-edit-btn" id="actionCardEditBtn" onclick="onActionCardEditClick(event)" title="Edit Teks Langsung">
+                                            <span class="action-icon">✏️</span>
+                                            <span>Edit</span>
+                                        </button>
+                                        <div class="action-card-divider" id="actionCardDivider"></div>
+                                        <button type="button" class="action-card-btn action-delete-btn" id="actionCardDeleteBtn" onclick="onActionCardDeleteClick(event)" title="Hapus Objek dari Dokumen">
+                                            <span class="action-icon">🗑️</span>
+                                            <span>Hapus</span>
+                                        </button>
+                                    </div>
                                 </div>
                             </div>
 
@@ -369,6 +382,64 @@
                                 </div>
                             </div>
                         </div>
+
+                        <!-- Right Tools & Action Sidebar (iLovePDF Style) -->
+                        <aside class="editor-sidebar-right" id="rightSidebar">
+                            <div class="right-sidebar-content">
+                                <div class="right-sidebar-header">
+                                    <div class="right-title-wrap">
+                                        <span class="right-sidebar-icon">✍️</span>
+                                        <span class="right-sidebar-title">Edit PDF</span>
+                                    </div>
+                                    <span class="right-sidebar-badge">PRO</span>
+                                </div>
+
+                                <div class="right-sidebar-body">
+                                    <!-- Auto-Detect Info Banner -->
+                                    <div class="right-info-card">
+                                        <div class="right-info-header">
+                                            <span class="right-info-icon">⚡</span>
+                                            <span class="right-info-title">Auto-Detect Aktif</span>
+                                        </div>
+                                        <p class="right-info-desc">Arahkan kursor &amp; klik kalimat atau gambar pada dokumen untuk langsung mengedit atau menghapusnya.</p>
+                                    </div>
+
+                                    <!-- Layers & Elements Section -->
+                                    <div class="right-layers-section">
+                                        <div class="layers-section-header">
+                                            <span class="layers-title">Lapisan (<span id="activeElementsCount">0</span>)</span>
+                                            <button type="button" class="btn-clear-edits" onclick="clearCurrentPageAnnotations()" title="Hapus semua editan pada halaman ini">Reset Hal</button>
+                                        </div>
+                                        <div class="right-layers-list" id="rightLayersList">
+                                            <div class="layers-empty-state">
+                                                <span>Belum ada objek editan</span>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <!-- Output File Name Setting -->
+                                    <div class="right-output-box">
+                                        <label for="outputNameSidebar" class="right-label">💾 Nama File Hasil:</label>
+                                        <div class="output-input-row">
+                                            <input type="text" id="outputNameSidebar" class="output-input" value="edited_document" placeholder="nama_file" oninput="syncOutputName(this.value)" />
+                                            <span class="output-ext">.pdf</span>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- Big Red Primary Action Button at Bottom Right (iLovePDF Style) -->
+                                <div class="right-sidebar-footer">
+                                    <button class="btn btn-process btn-red-ilovepdf" id="rightProcessTaskBtn" onclick="saveEditedPDF()">
+                                        <span>Simpan Perubahan</span>
+                                        <span class="btn-process-arrow">➔</span>
+                                    </button>
+                                    <button class="btn-gdrive-sidebar" onclick="saveEditedToGDrive()" title="Simpan langsung ke Google Drive">
+                                        <svg viewBox="0 0 87.3 78" width="16" height="16" xmlns="http://www.w3.org/2000/svg"><path d="m6.6 66.85 3.85 6.65c.8 1.4 1.95 2.5 3.3 3.3l13.75-23.8h-27.5c0 1.55.4 3.1 1.2 4.5z" fill="#0066da"/><path d="m43.65 25-13.75-23.8c-1.35.8-2.5 1.9-3.3 3.3l-25.4 44c-.8 1.4-1.2 2.95-1.2 4.5h27.5z" fill="#00ac47"/><path d="m73.55 76.8c1.35-.8 2.5-1.9 3.3-3.3l1.6-2.75 7.65-13.25c.8-1.4 1.2-2.95 1.2-4.5h-27.502l5.852 11.5z" fill="#ea4335"/><path d="m43.65 25 13.75-23.8c-1.35-.8-2.9-1.2-4.5-1.2h-18.5c-1.6 0-3.15.45-4.5 1.2z" fill="#00832d"/><path d="m59.8 53h-32.3l-13.75 23.8c1.35.8 2.9 1.2 4.5 1.2h50.8c1.6 0 3.15-.45 4.5-1.2z" fill="#2684fc"/><path d="m73.4 26.5-12.7-22c-.8-1.4-1.95-2.5-3.3-3.3l-13.75 23.8 16.15 28h27.45c0-1.55-.4-3.1-1.2-4.5z" fill="#ffba00"/></svg>
+                                        <span>Simpan ke Drive</span>
+                                    </button>
+                                </div>
+                            </div>
+                        </aside>
                     </div>
                 </div>
 
@@ -409,6 +480,6 @@
 
     <script src="gdrive-config.js?v=4"></script>
     <script src="gdrive-picker.js?v=4"></script>
-    <script src="edit-pdf.js?v=11"></script>
+    <script src="edit-pdf.js?v=12"></script>
 </body>
 </html>

@@ -199,7 +199,10 @@ async function handleFileSelect(file) {
     selectedElementId = null;
 
     document.getElementById('docTitle').textContent = `📄 ${file.name}`;
-    document.getElementById('outputName').value = file.name.replace(/\.pdf$/i, '') + '_edited';
+    const defaultOutName = file.name.replace(/\.pdf$/i, '') + '_edited';
+    document.getElementById('outputName').value = defaultOutName;
+    const sideOut = document.getElementById('outputNameSidebar');
+    if (sideOut) sideOut.value = defaultOutName;
 
     showProgress(15, 'Memuat dokumen PDF...');
     hideStatus();
@@ -508,6 +511,7 @@ async function renderCurrentPage() {
     applyZoom();
     updateHistoryButtons();
     updateThumbnailActiveState();
+    updateRightSidebarLayersList();
 }
 
 // ─── Sidebar Thumbnails Engine ──────────────────────────────────
@@ -878,6 +882,12 @@ function applyZoom() {
     const zoomText = `${Math.round(currentZoom * 100)}%`;
     if (display) display.textContent = zoomText;
     if (previewDisplay) previewDisplay.textContent = zoomText;
+
+    if (selectedElementId) {
+        const el = document.getElementById(selectedElementId);
+        const item = getElementById(selectedElementId);
+        if (el && item) updateActionCardPosition(el, item);
+    }
 }
 
 // ─── Page Navigation ────────────────────────────────────────────
@@ -1325,23 +1335,6 @@ function renderOverlayElement(item) {
     el.style.left = item.x + 'px';
     el.style.top  = item.y + 'px';
 
-    // Delete handle (Red circular ✕ button)
-    const delBtn = document.createElement('div');
-    delBtn.className = 'anno-delete-btn';
-    delBtn.innerHTML = '✕';
-    delBtn.title = 'Hapus Objek / Tutup (Delete)';
-
-    const triggerDelete = (e) => {
-        e.stopPropagation();
-        e.preventDefault();
-        deleteSelectedElement(item.id);
-    };
-
-    delBtn.addEventListener('mousedown', triggerDelete);
-    delBtn.addEventListener('click', triggerDelete);
-    delBtn.addEventListener('touchstart', triggerDelete, { passive: false });
-    el.appendChild(delBtn);
-
     // 4 Corner Resize Handles
     const handles = ['nw', 'ne', 'sw', 'se'];
     handles.forEach(pos => {
@@ -1475,7 +1468,7 @@ function attachElementInteractions(el, item) {
     // Double-click directly enters text editing
     if (item.type === 'text') {
         el.addEventListener('dblclick', (e) => {
-            if (e.target.classList.contains('anno-handle') || e.target.classList.contains('anno-delete-btn')) return;
+            if (e.target.classList.contains('anno-handle')) return;
             e.stopPropagation();
             selectElement(item.id);
             enableTextEditing(el, item);
@@ -1483,7 +1476,7 @@ function attachElementInteractions(el, item) {
     }
 
     el.addEventListener('mousedown', (e) => {
-        if (e.target.classList.contains('anno-handle') || e.target.classList.contains('anno-delete-btn')) {
+        if (e.target.classList.contains('anno-handle')) {
             return;
         }
 
@@ -1516,6 +1509,7 @@ function attachElementInteractions(el, item) {
                 item.y = Math.max(0, initY + dy);
                 el.style.left = item.x + 'px';
                 el.style.top  = item.y + 'px';
+                updateActionCardPosition(el, item);
             }
         };
 
@@ -1526,6 +1520,7 @@ function attachElementInteractions(el, item) {
             if (isMoving) {
                 item.width  = el.offsetWidth;
                 item.height = el.offsetHeight;
+                updateActionCardPosition(el, item);
             } else {
                 // If clicked without dragging:
                 // If already selected and it's a text box, enter in-place text editing!
@@ -1579,6 +1574,7 @@ function attachElementInteractions(el, item) {
                 el.style.top    = item.y + 'px';
                 el.style.width  = item.width + 'px';
                 el.style.height = item.height + 'px';
+                updateActionCardPosition(el, item);
 
                 if (item.type === 'shape') {
                     const svgWrap = el.querySelector('.shape-svg-wrap');
@@ -1589,6 +1585,7 @@ function attachElementInteractions(el, item) {
             const onResizeUp = () => {
                 item.width  = el.offsetWidth;
                 item.height = el.offsetHeight;
+                updateActionCardPosition(el, item);
                 document.removeEventListener('mousemove', onResizeMove);
                 document.removeEventListener('mouseup', onResizeUp);
             };
@@ -1599,16 +1596,83 @@ function attachElementInteractions(el, item) {
     });
 }
 
+// ─── Floating Action Card Engine (iLovePDF Style: [Edit | Delete]) ───
+function updateActionCardPosition(el, item) {
+    const card = document.getElementById('annoActionCard');
+    if (!card || !el) return;
+
+    // Position card centered horizontally above element
+    const centerX = el.offsetLeft + (el.offsetWidth / 2);
+    let topY = el.offsetTop - 40;
+    if (topY < 6) {
+        // If too close to top border, position below element
+        topY = el.offsetTop + el.offsetHeight + 8;
+    }
+
+    card.style.left = centerX + 'px';
+    card.style.top  = topY + 'px';
+
+    const editBtn = document.getElementById('actionCardEditBtn');
+    const divider = document.getElementById('actionCardDivider');
+    if (editBtn && divider) {
+        if (item && item.type === 'text') {
+            editBtn.style.display = 'inline-flex';
+            divider.style.display = 'block';
+        } else {
+            editBtn.style.display = 'none';
+            divider.style.display = 'none';
+        }
+    }
+
+    card.classList.remove('hidden');
+}
+
+function hideActionCard() {
+    const card = document.getElementById('annoActionCard');
+    if (card) card.classList.add('hidden');
+}
+
+function onActionCardEditClick(e) {
+    if (e) {
+        e.stopPropagation();
+        e.preventDefault();
+    }
+    if (!selectedElementId) return;
+    const item = getElementById(selectedElementId);
+    const el = document.getElementById(selectedElementId);
+    if (el && item) {
+        enableTextEditing(el, item);
+    }
+}
+
+function onActionCardDeleteClick(e) {
+    if (e) {
+        e.stopPropagation();
+        e.preventDefault();
+    }
+    if (!selectedElementId) return;
+    deleteSelectedElement(selectedElementId);
+}
+
 function selectElement(id) {
     selectedElementId = id;
+    const item = getElementById(id);
     document.querySelectorAll('.anno-element').forEach(el => {
         el.classList.toggle('selected', el.id === id);
     });
+    const selectedEl = id ? document.getElementById(id) : null;
+    if (selectedEl && item) {
+        updateActionCardPosition(selectedEl, item);
+    } else {
+        hideActionCard();
+    }
     showPropsForSelectedElement();
+    updateRightSidebarLayersList();
 }
 
 function deselectAllElements() {
     selectedElementId = null;
+    hideActionCard();
     document.querySelectorAll('.anno-element').forEach(el => {
         el.classList.remove('selected');
         if (el.classList.contains('is-editing')) {
@@ -1620,6 +1684,7 @@ function deselectAllElements() {
     propBars.forEach(id => document.getElementById(id)?.classList.add('hidden'));
     const badgeWrap = document.getElementById('trueEditBadgeWrap');
     if (badgeWrap) badgeWrap.style.display = 'none';
+    updateRightSidebarLayersList();
 }
 
 function deleteSelectedElement(targetId) {
@@ -1656,7 +1721,88 @@ function deleteSelectedElement(targetId) {
     }
     const domEl = document.getElementById(idToDelete);
     if (domEl) domEl.remove();
+    hideActionCard();
     deselectAllElements();
+    updateRightSidebarLayersList();
+}
+
+// ─── Right Sidebar Layers List Engine (iLovePDF Style) ──────────
+function updateRightSidebarLayersList() {
+    const listEl = document.getElementById('rightLayersList');
+    const countEl = document.getElementById('activeElementsCount');
+    if (!listEl) return;
+
+    const elements = pageEdits[currentPage]?.elements || [];
+    if (countEl) countEl.textContent = elements.length;
+
+    if (elements.length === 0) {
+        listEl.innerHTML = '<div class="layers-empty-state"><span>Belum ada objek editan</span></div>';
+        return;
+    }
+
+    listEl.innerHTML = '';
+    elements.forEach(el => {
+        const itemDiv = document.createElement('div');
+        itemDiv.className = `right-layer-item ${el.id === selectedElementId ? 'active' : ''}`;
+        itemDiv.title = 'Klik untuk pilih objek ini';
+        itemDiv.onclick = (e) => {
+            e.stopPropagation();
+            selectElement(el.id);
+        };
+
+        let icon = '🔤';
+        let label = 'Teks';
+        if (el.type === 'image') {
+            icon = '🖼️';
+            label = el.isOriginalImage ? 'Gambar Asli' : 'Foto Sisipan';
+        } else if (el.type === 'whiteout') {
+            icon = '⬜';
+            label = 'Tip-Ex Putih';
+        } else if (el.type === 'shape') {
+            icon = '🔷';
+            label = `Bentuk (${el.shapeType || 'Shape'})`;
+        } else if (el.content) {
+            label = el.content.trim().slice(0, 20) || 'Teks Kosong';
+        }
+
+        const leftWrap = document.createElement('div');
+        leftWrap.style.display = 'flex';
+        leftWrap.style.alignItems = 'center';
+        leftWrap.style.gap = '6px';
+        leftWrap.style.overflow = 'hidden';
+        leftWrap.innerHTML = `<span>${icon}</span><span class="layer-item-title">${escapeHtml(label)}</span>`;
+
+        const delBtn = document.createElement('button');
+        delBtn.type = 'button';
+        delBtn.className = 'layer-item-del';
+        delBtn.title = 'Hapus layer ini';
+        delBtn.innerHTML = '🗑️';
+        delBtn.onclick = (e) => {
+            e.stopPropagation();
+            deleteSelectedElement(el.id);
+        };
+
+        itemDiv.appendChild(leftWrap);
+        itemDiv.appendChild(delBtn);
+        listEl.appendChild(itemDiv);
+    });
+}
+
+function escapeHtml(str) {
+    return String(str).replace(/[&<>"']/g, m => ({
+        '&': '&amp;',
+        '<': '&lt;',
+        '>': '&gt;',
+        '"': '&quot;',
+        "'": '&#039;'
+    })[m]);
+}
+
+function syncOutputName(val) {
+    const mainOut = document.getElementById('outputName');
+    const sideOut = document.getElementById('outputNameSidebar');
+    if (mainOut && mainOut.value !== val) mainOut.value = val;
+    if (sideOut && sideOut.value !== val) sideOut.value = val;
 }
 
 function getElementById(id) {
