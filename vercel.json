@@ -1,6 +1,12 @@
 {
   "cleanUrls": true,
   "trailingSlash": false,
+  "rewrites": [
+    {
+      "source": "/api/true-edit",
+      "destination": "/api/true_edit.py"
+    }
+  ],
   "headers": [
     {
       "source": "/sw.js",

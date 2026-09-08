@@ -2811,5 +2811,49 @@ body {
     width: 140px;
 }
 
+/* TrueEdit Vector Engine Badge & Indicator */
+.badge-trueedit {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    background: linear-gradient(135deg, #0ea5e9, #6366f1);
+    color: #ffffff !important;
+    font-size: 0.72rem;
+    font-weight: 700;
+    padding: 3px 8px;
+    border-radius: 9999px;
+    letter-spacing: 0.02em;
+    box-shadow: 0 1px 4px rgba(14, 165, 233, 0.35);
+    user-select: none;
+    animation: trueEditPulse 2.5s infinite;
+}
 
+@keyframes trueEditPulse {
+    0%, 100% {
+        box-shadow: 0 1px 4px rgba(14, 165, 233, 0.35);
+    }
+    50% {
+        box-shadow: 0 1px 10px rgba(99, 102, 241, 0.65);
+    }
+}
 
+.anno-text.is-trueedit {
+    outline: 1.5px dashed #0ea5e9 !important;
+}
+
+.anno-text.is-trueedit::after {
+    content: '⚡ TrueEdit';
+    position: absolute;
+    top: -18px;
+    left: 0;
+    font-size: 0.62rem;
+    font-weight: 800;
+    background: #0ea5e9;
+    color: #ffffff;
+    padding: 1px 5px;
+    border-radius: 4px;
+    pointer-events: none;
+    line-height: 1.2;
+    z-index: 20;
+    white-space: nowrap;
+}

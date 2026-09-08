@@ -118,8 +118,8 @@
                                 <button class="editor-btn" id="toolTextBtn" onclick="setActiveTool('text')" title="Tambah Teks Baru">
                                     <span class="editor-btn-icon">🔤</span><span>Tambah Teks</span>
                                 </button>
-                                <button class="editor-btn" id="toolReplaceTextBtn" onclick="setActiveTool('replaceText')" title="Ganti Teks Asli PDF (Klik teks asli untuk ganti)">
-                                    <span class="editor-btn-icon">📝</span><span>Ganti Teks PDF</span>
+                                <button class="editor-btn" id="toolReplaceTextBtn" onclick="setActiveTool('replaceText')" title="Ganti Teks Asli PDF dengan TrueEdit Vector Engine (Hapus teks dari stream tanpa merusak gambar latar)">
+                                    <span class="editor-btn-icon">📝</span><span>Ganti Teks <span class="badge-trueedit" style="font-size: 0.58rem; padding: 1px 5px; margin-left: 2px;">⚡ TrueEdit</span></span>
                                 </button>
                                 <button class="editor-btn" id="toolWhiteoutBtn" onclick="addWhiteoutBox()" title="Tip-Ex / Hapus Teks (Tutup dengan kotak putih)">
                                     <span class="editor-btn-icon">⬜</span><span>Tip-Ex</span>
@@ -171,6 +171,9 @@
                         <!-- Context-Sensitive Properties Bar -->
                         <!-- 1. Text Properties -->
                         <div id="propsText" class="editor-props-bar hidden">
+                            <div class="prop-item" id="trueEditBadgeWrap" style="display: none;">
+                                <span class="badge-trueedit" title="TrueEdit Vector Engine aktif: Teks asli dihapus bersih dari PDF stream tanpa merusak background gambar atau vektor">⚡ TrueEdit Engine</span>
+                            </div>
                             <div class="prop-item">
                                 <span class="prop-label">Font:</span>
                                 <select id="textFontFamily" class="prop-select" onchange="updateSelectedTextProp('fontFamily', this.value)">

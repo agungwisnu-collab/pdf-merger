@@ -288,6 +288,8 @@ function showPropsForSelectedElement() {
         document.getElementById('textBoldBtn')?.classList.toggle('active', !!item.isBold);
         document.getElementById('textItalicBtn')?.classList.toggle('active', !!item.isItalic);
         document.getElementById('textBgBtn')?.classList.toggle('active', !!item.hasBg);
+        const badgeWrap = document.getElementById('trueEditBadgeWrap');
+        if (badgeWrap) badgeWrap.style.display = item.isTrueEdit ? 'inline-flex' : 'none';
     } else if (item.type === 'image') {
         document.getElementById('toolImageBtn')?.classList.add('active');
         document.getElementById('propsImage')?.classList.remove('hidden');
@@ -420,9 +422,13 @@ function replaceExistingPdfText(originalText, exactLeft, exactTop, width, fontSi
         color: textSettings.color,
         isBold: textSettings.isBold,
         isItalic: textSettings.isItalic,
-        hasBg: true, // White background covers old text!
+        hasBg: true, // White background for on-screen preview
         width: boxW,
-        height: boxH
+        height: boxH,
+        isTrueEdit: true,
+        origRect: [exactLeft, exactTop, exactLeft + width, exactTop + (cleanFontSize * 1.2)],
+        origText: originalText,
+        pageIndex: currentPage - 1
     };
 
     pageEdits[currentPage].elements.push(replaceItem);
@@ -884,7 +890,7 @@ function renderOverlayElement(item) {
     const overlay = document.getElementById('annotationOverlay');
     const el = document.createElement('div');
     el.id = item.id;
-    el.className = `anno-element anno-${item.type}`;
+    el.className = `anno-element anno-${item.type}${item.isTrueEdit ? ' is-trueedit' : ''}`;
     el.style.left = item.x + 'px';
     el.style.top  = item.y + 'px';
 
@@ -1100,6 +1106,8 @@ function deselectAllElements() {
     document.querySelectorAll('.anno-element').forEach(el => el.classList.remove('selected'));
     const propBars = ['propsText', 'propsShape', 'propsImage', 'propsWhiteout'];
     propBars.forEach(id => document.getElementById(id)?.classList.add('hidden'));
+    const badgeWrap = document.getElementById('trueEditBadgeWrap');
+    if (badgeWrap) badgeWrap.style.display = 'none';
 }
 
 function deleteSelectedElement() {
@@ -1194,7 +1202,255 @@ function updateHistoryButtons() {
     if (redoBtn) redoBtn.disabled = redoStack.length === 0;
 }
 
-// ─── High-Resolution Export Engine (PDF-Lib + Canvas) ───────────
+// ─── TrueEdit Engine & High-Resolution Export Engine ───────────
+
+function arrayBufferToBase64(buffer) {
+    let binary = '';
+    const bytes = new Uint8Array(buffer);
+    const chunkSize = 0x8000;
+    for (let i = 0; i < bytes.length; i += chunkSize) {
+        binary += String.fromCharCode.apply(null, bytes.subarray(i, i + chunkSize));
+    }
+    return btoa(binary);
+}
+
+async function callTrueEditEngine(file, edits) {
+    if (file.size > 4.2 * 1024 * 1024) {
+        throw new Error('File melebihi limit Serverless 4.2 MB.');
+    }
+
+    const arrayBuf = await file.arrayBuffer();
+    const pdfBase64 = arrayBufferToBase64(arrayBuf);
+
+    const response = await fetch('/api/true-edit', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+            pdfBase64: pdfBase64,
+            edits: edits
+        })
+    });
+
+    if (!response.ok) {
+        let errDetail = 'Serverless status ' + response.status;
+        try {
+            const errJson = await response.json();
+            if (errJson.error) errDetail = errJson.error;
+        } catch (_) {}
+        throw new Error(errDetail);
+    }
+
+    return await response.arrayBuffer();
+}
+
+async function renderDocumentViaCanvas() {
+    const { PDFDocument } = PDFLib;
+    const newPdfDoc = await PDFDocument.create();
+
+    for (let i = 1; i <= totalPages; i++) {
+        const pct = Math.round(20 + (i / totalPages) * 70);
+        showProgress(pct, `Menyimpan lembar ${i} dari ${totalPages}...`);
+
+        const page = await pdfDocJs.getPage(i);
+        const renderScale = 2.5;
+        const viewport = page.getViewport({ scale: renderScale });
+
+        const canvas = document.createElement('canvas');
+        canvas.width  = viewport.width;
+        canvas.height = viewport.height;
+        const ctx = canvas.getContext('2d');
+
+        // 1. Render PDF base layer
+        await page.render({ canvasContext: ctx, viewport }).promise;
+
+        // 2. Render freehand drawings
+        const edits = pageEdits[i];
+        if (edits) {
+            if (edits.drawingDataUrl) {
+                const drawImg = await loadImage(edits.drawingDataUrl);
+                ctx.drawImage(drawImg, 0, 0, canvas.width, canvas.height);
+            }
+
+            // 3. Render all annotations (whiteout, text, shapes, images)
+            const scaleFactor = renderScale / 1.0;
+            for (const el of (edits.elements || [])) {
+                if (el.type === 'whiteout') {
+                    ctx.fillStyle = '#ffffff';
+                    ctx.fillRect(el.x * scaleFactor, el.y * scaleFactor, el.width * scaleFactor, el.height * scaleFactor);
+                } else if (el.type === 'text') {
+                    drawTextOnCanvas(ctx, el, scaleFactor);
+                } else if (el.type === 'image') {
+                    const img = await loadImage(el.dataUrl);
+                    ctx.save();
+                    ctx.globalAlpha = el.opacity !== undefined ? el.opacity : 1.0;
+                    if (el.rotation) {
+                        const cx = (el.x + el.width / 2) * scaleFactor;
+                        const cy = (el.y + el.height / 2) * scaleFactor;
+                        ctx.translate(cx, cy);
+                        ctx.rotate((el.rotation * Math.PI) / 180);
+                        ctx.drawImage(img, (-el.width / 2) * scaleFactor, (-el.height / 2) * scaleFactor, el.width * scaleFactor, el.height * scaleFactor);
+                    } else {
+                        ctx.drawImage(img, el.x * scaleFactor, el.y * scaleFactor, el.width * scaleFactor, el.height * scaleFactor);
+                    }
+                    ctx.restore();
+                } else if (el.type === 'shape') {
+                    drawShapeOnCanvas(ctx, el, scaleFactor);
+                }
+            }
+        }
+
+        const blob = await new Promise(r => canvas.toBlob(r, 'image/jpeg', 0.94));
+        const imgBytes = new Uint8Array(await blob.arrayBuffer());
+        const embedded = await newPdfDoc.embedJpg(imgBytes);
+
+        const origVp = page.getViewport({ scale: 1.0 });
+        const newPage = newPdfDoc.addPage([origVp.width, origVp.height]);
+        newPage.drawImage(embedded, { x: 0, y: 0, width: origVp.width, height: origVp.height });
+    }
+
+    const pdfBytes = await newPdfDoc.save();
+    return new Blob([pdfBytes], { type: 'application/pdf' });
+}
+
+async function renderRemainingAnnotationsOnTrueEdit(trueEditBytes) {
+    const tempDoc = await pdfjsLib.getDocument({ data: trueEditBytes }).promise;
+    const { PDFDocument } = PDFLib;
+    const newPdfDoc = await PDFDocument.create();
+
+    for (let i = 1; i <= tempDoc.numPages; i++) {
+        const pct = Math.round(50 + (i / tempDoc.numPages) * 40);
+        showProgress(pct, `Menggabungkan elemen lembar ${i} dari ${tempDoc.numPages}...`);
+
+        const page = await tempDoc.getPage(i);
+        const renderScale = 2.5;
+        const viewport = page.getViewport({ scale: renderScale });
+
+        const canvas = document.createElement('canvas');
+        canvas.width  = viewport.width;
+        canvas.height = viewport.height;
+        const ctx = canvas.getContext('2d');
+
+        // Render TrueEdited PDF page as base layer (TrueEdit vector edits are already embedded!)
+        await page.render({ canvasContext: ctx, viewport }).promise;
+
+        const edits = pageEdits[i];
+        if (edits) {
+            if (edits.drawingDataUrl) {
+                const drawImg = await loadImage(edits.drawingDataUrl);
+                ctx.drawImage(drawImg, 0, 0, canvas.width, canvas.height);
+            }
+
+            const scaleFactor = renderScale / 1.0;
+            for (const el of (edits.elements || [])) {
+                // Skip TrueEdit elements because they are ALREADY rendered in native vector
+                if (el.isTrueEdit) continue;
+
+                if (el.type === 'whiteout') {
+                    ctx.fillStyle = '#ffffff';
+                    ctx.fillRect(el.x * scaleFactor, el.y * scaleFactor, el.width * scaleFactor, el.height * scaleFactor);
+                } else if (el.type === 'text') {
+                    drawTextOnCanvas(ctx, el, scaleFactor);
+                } else if (el.type === 'image') {
+                    const img = await loadImage(el.dataUrl);
+                    ctx.save();
+                    ctx.globalAlpha = el.opacity !== undefined ? el.opacity : 1.0;
+                    if (el.rotation) {
+                        const cx = (el.x + el.width / 2) * scaleFactor;
+                        const cy = (el.y + el.height / 2) * scaleFactor;
+                        ctx.translate(cx, cy);
+                        ctx.rotate((el.rotation * Math.PI) / 180);
+                        ctx.drawImage(img, (-el.width / 2) * scaleFactor, (-el.height / 2) * scaleFactor, el.width * scaleFactor, el.height * scaleFactor);
+                    } else {
+                        ctx.drawImage(img, el.x * scaleFactor, el.y * scaleFactor, el.width * scaleFactor, el.height * scaleFactor);
+                    }
+                    ctx.restore();
+                } else if (el.type === 'shape') {
+                    drawShapeOnCanvas(ctx, el, scaleFactor);
+                }
+            }
+        }
+
+        const blob = await new Promise(r => canvas.toBlob(r, 'image/jpeg', 0.94));
+        const imgBytes = new Uint8Array(await blob.arrayBuffer());
+        const embedded = await newPdfDoc.embedJpg(imgBytes);
+
+        const origVp = page.getViewport({ scale: 1.0 });
+        const newPage = newPdfDoc.addPage([origVp.width, origVp.height]);
+        newPage.drawImage(embedded, { x: 0, y: 0, width: origVp.width, height: origVp.height });
+    }
+
+    const pdfBytes = await newPdfDoc.save();
+    return new Blob([pdfBytes], { type: 'application/pdf' });
+}
+
+async function buildExportPdfBlob() {
+    // 1. Check for TrueEdit elements
+    const trueEdits = [];
+    let hasNonTrueEdits = false;
+
+    for (let p = 1; p <= totalPages; p++) {
+        const pEdits = pageEdits[p];
+        if (!pEdits) continue;
+
+        if (pEdits.drawingDataUrl) {
+            hasNonTrueEdits = true;
+        }
+
+        if (pEdits.elements && pEdits.elements.length > 0) {
+            pEdits.elements.forEach(el => {
+                if (el.isTrueEdit) {
+                    const origR = el.origRect || [el.x, el.y, el.x + el.width, el.y + el.height];
+                    const targetLeft = el.x + 4;
+                    const targetTop  = el.y + 2;
+                    const targetRight = targetLeft + (el.width ? el.width - 8 : (origR[2] - origR[0]));
+                    const targetBottom = targetTop + (el.height || (origR[3] - origR[1]));
+
+                    trueEdits.push({
+                        page: p - 1,
+                        rect: origR,
+                        targetRect: [targetLeft, targetTop, targetRight, targetBottom],
+                        newText: el.content || '',
+                        fontFamily: el.fontFamily || textSettings.fontFamily,
+                        fontSize: el.fontSize || 16,
+                        color: el.color || '#0f172a',
+                        bold: !!el.isBold,
+                        italic: !!el.isItalic,
+                        useWhiteout: false
+                    });
+                } else {
+                    hasNonTrueEdits = true;
+                }
+            });
+        }
+    }
+
+    // 2. If TrueEdit elements exist, attempt serverless processing
+    if (trueEdits.length > 0 && pdfFile.size <= 4.2 * 1024 * 1024 && navigator.onLine !== false) {
+        try {
+            showProgress(25, 'Menjalankan TrueEdit Engine di Vercel (Redaksi Stream Vektor)...');
+            const trueEditBytes = await callTrueEditEngine(pdfFile, trueEdits);
+
+            if (!hasNonTrueEdits) {
+                showProgress(90, 'TrueEdit Vector selesai sempurna!');
+                return new Blob([trueEditBytes], { type: 'application/pdf' });
+            }
+
+            showProgress(45, 'Menerapkan coretan & gambar ke dokumen TrueEdit...');
+            return await renderRemainingAnnotationsOnTrueEdit(trueEditBytes);
+
+        } catch (err) {
+            console.warn('TrueEdit Engine fallback to High-DPI canvas:', err);
+            // Seamless fallback to High-DPI Canvas
+        }
+    }
+
+    // 3. Fallback to client-side High-DPI canvas engine
+    showProgress(20, 'Merender dokumen dengan High-DPI Canvas Engine...');
+    return await renderDocumentViaCanvas();
+}
+
 async function saveEditedPDF() {
     if (!pdfFile || !pdfDocJs) return;
     saveCurrentPageEdits();
@@ -1204,78 +1460,11 @@ async function saveEditedPDF() {
     const saveBtn = document.getElementById('saveBtn');
     saveBtn.disabled = true;
 
-    showProgress(15, 'Merender perubahan dengan resolusi tinggi (High-DPI)...');
-
     try {
-        const { PDFDocument } = PDFLib;
-        const newPdfDoc = await PDFDocument.create();
+        const finalBlob = await buildExportPdfBlob();
 
-        for (let i = 1; i <= totalPages; i++) {
-            const pct = Math.round(15 + (i / totalPages) * 75);
-            showProgress(pct, `Menyimpan lembar ${i} dari ${totalPages}...`);
-
-            const page = await pdfDocJs.getPage(i);
-            const renderScale = 2.5;
-            const viewport = page.getViewport({ scale: renderScale });
-
-            const canvas = document.createElement('canvas');
-            canvas.width  = viewport.width;
-            canvas.height = viewport.height;
-            const ctx = canvas.getContext('2d');
-
-            // 1. Render PDF base layer
-            await page.render({ canvasContext: ctx, viewport }).promise;
-
-            // 2. Render freehand drawings
-            const edits = pageEdits[i];
-            if (edits) {
-                if (edits.drawingDataUrl) {
-                    const drawImg = await loadImage(edits.drawingDataUrl);
-                    ctx.drawImage(drawImg, 0, 0, canvas.width, canvas.height);
-                }
-
-                // 3. Render all annotations (whiteout, text, shapes, images)
-                const scaleFactor = renderScale / 1.0;
-                for (const el of (edits.elements || [])) {
-                    if (el.type === 'whiteout') {
-                        ctx.fillStyle = '#ffffff';
-                        ctx.fillRect(el.x * scaleFactor, el.y * scaleFactor, el.width * scaleFactor, el.height * scaleFactor);
-                    } else if (el.type === 'text') {
-                        drawTextOnCanvas(ctx, el, scaleFactor);
-                    } else if (el.type === 'image') {
-                        const img = await loadImage(el.dataUrl);
-                        ctx.save();
-                        ctx.globalAlpha = el.opacity !== undefined ? el.opacity : 1.0;
-                        if (el.rotation) {
-                            const cx = (el.x + el.width / 2) * scaleFactor;
-                            const cy = (el.y + el.height / 2) * scaleFactor;
-                            ctx.translate(cx, cy);
-                            ctx.rotate((el.rotation * Math.PI) / 180);
-                            ctx.drawImage(img, (-el.width / 2) * scaleFactor, (-el.height / 2) * scaleFactor, el.width * scaleFactor, el.height * scaleFactor);
-                        } else {
-                            ctx.drawImage(img, el.x * scaleFactor, el.y * scaleFactor, el.width * scaleFactor, el.height * scaleFactor);
-                        }
-                        ctx.restore();
-                    } else if (el.type === 'shape') {
-                        drawShapeOnCanvas(ctx, el, scaleFactor);
-                    }
-                }
-            }
-
-            const blob = await new Promise(r => canvas.toBlob(r, 'image/jpeg', 0.94));
-            const imgBytes = new Uint8Array(await blob.arrayBuffer());
-            const embedded = await newPdfDoc.embedJpg(imgBytes);
-
-            const origVp = page.getViewport({ scale: 1.0 });
-            const newPage = newPdfDoc.addPage([origVp.width, origVp.height]);
-            newPage.drawImage(embedded, { x: 0, y: 0, width: origVp.width, height: origVp.height });
-        }
-
-        showProgress(95, 'Menyelesaikan dokumen PDF...');
-        const pdfBytes = await newPdfDoc.save();
-        const blob = new Blob([pdfBytes], { type: 'application/pdf' });
-        const url = URL.createObjectURL(blob);
-
+        showProgress(95, 'Menyiapkan unduhan...');
+        const url = URL.createObjectURL(finalBlob);
         const a = document.createElement('a');
         a.href = url;
         a.download = outputName;
@@ -1294,7 +1483,6 @@ async function saveEditedPDF() {
     }
 }
 
-// ─── Save Edited PDF to Google Drive ───────────────────────────
 async function saveEditedToGDrive() {
     if (!pdfFile || !pdfDocJs) return;
     saveCurrentPageEdits();
@@ -1306,76 +1494,12 @@ async function saveEditedToGDrive() {
     saveBtn.disabled = true;
     if (gdriveBtn) gdriveBtn.disabled = true;
 
-    showProgress(15, 'Merender perubahan untuk Google Drive...');
-
     try {
-        const { PDFDocument } = PDFLib;
-        const newPdfDoc = await PDFDocument.create();
-
-        for (let i = 1; i <= totalPages; i++) {
-            const pct = Math.round(15 + (i / totalPages) * 65);
-            showProgress(pct, `Menyiapkan lembar ${i} dari ${totalPages}...`);
-
-            const page = await pdfDocJs.getPage(i);
-            const renderScale = 2.5;
-            const viewport = page.getViewport({ scale: renderScale });
-
-            const canvas = document.createElement('canvas');
-            canvas.width  = viewport.width;
-            canvas.height = viewport.height;
-            const ctx = canvas.getContext('2d');
-
-            await page.render({ canvasContext: ctx, viewport }).promise;
-
-            const edits = pageEdits[i];
-            if (edits) {
-                if (edits.drawingDataUrl) {
-                    const drawImg = await loadImage(edits.drawingDataUrl);
-                    ctx.drawImage(drawImg, 0, 0, canvas.width, canvas.height);
-                }
-
-                const scaleFactor = renderScale / 1.0;
-                for (const el of (edits.elements || [])) {
-                    if (el.type === 'whiteout') {
-                        ctx.fillStyle = '#ffffff';
-                        ctx.fillRect(el.x * scaleFactor, el.y * scaleFactor, el.width * scaleFactor, el.height * scaleFactor);
-                    } else if (el.type === 'text') {
-                        drawTextOnCanvas(ctx, el, scaleFactor);
-                    } else if (el.type === 'image') {
-                        const img = await loadImage(el.dataUrl);
-                        ctx.save();
-                        ctx.globalAlpha = el.opacity !== undefined ? el.opacity : 1.0;
-                        if (el.rotation) {
-                            const cx = (el.x + el.width / 2) * scaleFactor;
-                            const cy = (el.y + el.height / 2) * scaleFactor;
-                            ctx.translate(cx, cy);
-                            ctx.rotate((el.rotation * Math.PI) / 180);
-                            ctx.drawImage(img, (-el.width / 2) * scaleFactor, (-el.height / 2) * scaleFactor, el.width * scaleFactor, el.height * scaleFactor);
-                        } else {
-                            ctx.drawImage(img, el.x * scaleFactor, el.y * scaleFactor, el.width * scaleFactor, el.height * scaleFactor);
-                        }
-                        ctx.restore();
-                    } else if (el.type === 'shape') {
-                        drawShapeOnCanvas(ctx, el, scaleFactor);
-                    }
-                }
-            }
-
-            const blob = await new Promise(r => canvas.toBlob(r, 'image/jpeg', 0.94));
-            const imgBytes = new Uint8Array(await blob.arrayBuffer());
-            const embedded = await newPdfDoc.embedJpg(imgBytes);
-
-            const origVp = page.getViewport({ scale: 1.0 });
-            const newPage = newPdfDoc.addPage([origVp.width, origVp.height]);
-            newPage.drawImage(embedded, { x: 0, y: 0, width: origVp.width, height: origVp.height });
-        }
+        const finalBlob = await buildExportPdfBlob();
 
         showProgress(85, 'Mengunggah ke Google Drive...');
-        const pdfBytes = await newPdfDoc.save();
-        const blob = new Blob([pdfBytes], { type: 'application/pdf' });
-
         uploadBlobToGDrive({
-            blob,
+            blob: finalBlob,
             filename: outputName,
             mimeType: 'application/pdf',
             onProgress: showProgress,
