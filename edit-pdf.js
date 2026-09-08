@@ -217,7 +217,7 @@ function setActiveTool(tool) {
             drawCanvas.style.pointerEvents = 'none';
         }
         if (overlay) overlay.style.pointerEvents = 'none';
-        if (textLayer) textLayer.classList.remove('active');
+        if (textLayer) textLayer.classList.add('active');
         if (selectedElementId) showPropsForSelectedElement();
     } else if (tool === 'text') {
         document.getElementById('toolTextBtn')?.classList.add('active');
@@ -227,7 +227,7 @@ function setActiveTool(tool) {
             drawCanvas.style.pointerEvents = 'none';
         }
         if (overlay) overlay.style.pointerEvents = 'none';
-        if (textLayer) textLayer.classList.remove('active');
+        if (textLayer) textLayer.classList.add('active');
         addTextAnnotation(false);
     } else if (tool === 'replaceText') {
         document.getElementById('toolReplaceTextBtn')?.classList.add('active');
@@ -327,6 +327,35 @@ function showPropsForSelectedElement() {
     }
 }
 
+// ─── Canvas Background Clean & In-Place Eraser ──────────────────
+function eraseRectFromBgCanvas(rect) {
+    if (!rect || rect.length < 4) return;
+    const bgCanvas = document.getElementById('pdfBgCanvas');
+    if (!bgCanvas) return;
+    const ctx = bgCanvas.getContext('2d');
+    const pad = 2;
+    const x = Math.max(0, Math.floor(rect[0] - pad));
+    const y = Math.max(0, Math.floor(rect[1] - pad));
+    const w = Math.min(bgCanvas.width - x, Math.ceil((rect[2] - rect[0]) + pad * 2));
+    const h = Math.min(bgCanvas.height - y, Math.ceil((rect[3] - rect[1]) + pad * 2));
+
+    if (w <= 0 || h <= 0) return;
+
+    // Sample surrounding background color just outside the rect
+    let fillColor = '#ffffff';
+    try {
+        const sampleX = Math.max(0, x - 2);
+        const sampleY = Math.max(0, y - 2);
+        const pixel = ctx.getImageData(sampleX, sampleY, 1, 1).data;
+        if (pixel[3] > 0) {
+            fillColor = `rgb(${pixel[0]}, ${pixel[1]}, ${pixel[2]})`;
+        }
+    } catch (_) {}
+
+    ctx.fillStyle = fillColor;
+    ctx.fillRect(x, y, w, h);
+}
+
 // ─── Rendering Page, Text Layer & Annotations ───────────────────
 async function renderCurrentPage() {
     if (!pdfDocJs) return;
@@ -342,10 +371,17 @@ async function renderCurrentPage() {
     const bgCtx = bgCanvas.getContext('2d');
     await page.render({ canvasContext: bgCtx, viewport: baseViewport }).promise;
 
-    // 2. Render Text Layer for "Replace Text" Feature
+    // 2. Erase any deleted elements from bgCanvas!
+    if (pageEdits[currentPage]?.deletedElements) {
+        pageEdits[currentPage].deletedElements.forEach(delItem => {
+            if (delItem.rect) eraseRectFromBgCanvas(delItem.rect);
+        });
+    }
+
+    // 3. Render Text Layer for in-place text selection & modification
     await renderInteractiveTextLayer(page, baseViewport);
 
-    // 3. Freehand Drawing Canvas
+    // 4. Freehand Drawing Canvas
     const drawCanvas = document.getElementById('drawingCanvas');
     drawCanvas.width  = baseViewport.width;
     drawCanvas.height = baseViewport.height;
@@ -358,7 +394,7 @@ async function renderCurrentPage() {
         img.src = pageEdits[currentPage].drawingDataUrl;
     }
 
-    // 4. Interactive Overlay Elements
+    // 5. Interactive Overlay Elements (Erase original spots from bgCanvas)
     const overlay = document.getElementById('annotationOverlay');
     overlay.style.width  = baseViewport.width + 'px';
     overlay.style.height = baseViewport.height + 'px';
@@ -366,6 +402,9 @@ async function renderCurrentPage() {
 
     if (pageEdits[currentPage]?.elements) {
         pageEdits[currentPage].elements.forEach(item => {
+            if (item.origRect) {
+                eraseRectFromBgCanvas(item.origRect);
+            }
             renderOverlayElement(item);
         });
     }
@@ -479,6 +518,9 @@ function renderDetectedImagesForCurrentPage() {
 
     const deleted = pageEdits[currentPage].deletedElements;
     const existingElements = pageEdits[currentPage].elements || [];
+    const bgCanvas = document.getElementById('pdfBgCanvas');
+    if (!bgCanvas) return;
+    const ctx = bgCanvas.getContext('2d');
 
     pageData.imageBlocks.forEach((img, idx) => {
         const isDeleted = deleted.some(d => d.action === 'delete_image' && d.xref === img.xref);
@@ -486,19 +528,39 @@ function renderDetectedImagesForCurrentPage() {
         if (isDeleted || isAdded) return;
 
         const rect = img.rect; // [x0, y0, x1, y1]
-        const w = Math.max(24, Math.round(rect[2] - rect[0]));
-        const h = Math.max(24, Math.round(rect[3] - rect[1]));
+        const x = Math.max(0, Math.floor(rect[0]));
+        const y = Math.max(0, Math.floor(rect[1]));
+        const w = Math.max(16, Math.min(bgCanvas.width - x, Math.ceil(rect[2] - rect[0])));
+        const h = Math.max(16, Math.min(bgCanvas.height - y, Math.ceil(rect[3] - rect[1])));
+
+        // Extract image pixels from canvas into real image element
+        let dataUrl = '';
+        try {
+            const imgData = ctx.getImageData(x, y, w, h);
+            const tempCanvas = document.createElement('canvas');
+            tempCanvas.width = w;
+            tempCanvas.height = h;
+            tempCanvas.getContext('2d').putImageData(imgData, 0, 0);
+            dataUrl = tempCanvas.toDataURL('image/png');
+        } catch (err) {
+            console.warn('Canvas extract note:', err);
+        }
+
+        // Erase original image from background canvas so it does NOT stay underneath!
+        eraseRectFromBgCanvas(rect);
 
         const imgItem = {
             id: `orig_img_${currentPage}_${idx}`,
-            type: 'detected_image',
-            x: Math.round(rect[0]),
-            y: Math.round(rect[1]),
+            type: 'image',
+            dataUrl: dataUrl,
+            x: x,
+            y: y,
             width: w,
             height: h,
             origRect: [rect[0], rect[1], rect[2], rect[3]],
             origXref: img.xref,
-            isOriginalImage: true
+            isOriginalImage: true,
+            wasMoved: false
         };
 
         pageEdits[currentPage].elements.push(imgItem);
@@ -514,7 +576,7 @@ async function renderInteractiveTextLayer(page, viewport) {
     textLayerDiv.style.width  = viewport.width + 'px';
     textLayerDiv.style.height = viewport.height + 'px';
 
-    // Click anywhere on text layer to place a replacement box if not clicking a specific span
+    // Click anywhere on text layer to place a new text box if not clicking a specific span
     textLayerDiv.onclick = (e) => {
         if (e.target !== textLayerDiv) return;
         const rect = textLayerDiv.getBoundingClientRect();
@@ -535,17 +597,23 @@ async function renderInteractiveTextLayer(page, viewport) {
             const width = item.width * viewport.scale;
             const height = fontHeight * 1.15;
 
+            // Check if this text is already lifted into an editable element or deleted
+            const isAlreadyLifted = pageEdits[currentPage]?.elements?.some(el => el.isTrueEdit && el.origRect && Math.abs(el.origRect[0] - left) < 5 && Math.abs(el.origRect[1] - top) < 5);
+            const isAlreadyDeleted = pageEdits[currentPage]?.deletedElements?.some(del => del.rect && Math.abs(del.rect[0] - left) < 5 && Math.abs(del.rect[1] - top) < 5);
+
+            if (isAlreadyLifted || isAlreadyDeleted) return;
+
             const span = document.createElement('span');
             span.className = 'pdf-text-item';
             span.style.left   = `${left}px`;
             span.style.top    = `${top}px`;
             span.style.width  = `${width}px`;
             span.style.height = `${height}px`;
-            span.title = `Klik untuk ganti: "${item.str}"`;
+            span.title = `Klik untuk edit teks langsung: "${item.str}"`;
 
             span.onclick = (e) => {
                 e.stopPropagation();
-                replaceExistingPdfText(item.str, left, top, width, Math.round(fontHeight));
+                replaceExistingPdfText(item.str, left, top, width, Math.round(fontHeight), span);
             };
 
             textLayerDiv.appendChild(span);
@@ -555,16 +623,25 @@ async function renderInteractiveTextLayer(page, viewport) {
     }
 }
 
-function replaceExistingPdfText(originalText, exactLeft, exactTop, width, fontSize) {
+function replaceExistingPdfText(originalText, exactLeft, exactTop, width, fontSize, clickedSpan) {
     saveStateForUndo();
-    if (!pageEdits[currentPage]) pageEdits[currentPage] = { elements: [] };
+    if (!pageEdits[currentPage]) pageEdits[currentPage] = { elements: [], deletedElements: [] };
 
     const cleanFontSize = Math.max(12, Math.min(40, fontSize || 16));
+    const origRect = [exactLeft, exactTop, exactLeft + width, exactTop + (cleanFontSize * 1.25)];
 
-    // Position element so text inside (with padLeft 4px, padTop 2px) sits at EXACT original coordinates
-    const posX = Math.max(0, Math.round(exactLeft - 4));
-    const posY = Math.max(0, Math.round(exactTop - 2));
-    const boxW = Math.max(60, Math.round(width + 8));
+    // 1. Physically erase the glyphs from the background canvas!
+    eraseRectFromBgCanvas(origRect);
+
+    // Hide the clicked span in text layer so it doesn't trigger duplicate replacement
+    if (clickedSpan) {
+        clickedSpan.style.display = 'none';
+    }
+
+    // 2. Position element with transparent background (pure in-place editing, no white sticker!)
+    const posX = Math.max(0, Math.round(exactLeft));
+    const posY = Math.max(0, Math.round(exactTop));
+    const boxW = Math.max(50, Math.round(width + 4));
     const boxH = Math.round((cleanFontSize * 1.25) + 4);
 
     const replaceItem = {
@@ -578,11 +655,13 @@ function replaceExistingPdfText(originalText, exactLeft, exactTop, width, fontSi
         color: textSettings.color,
         isBold: textSettings.isBold,
         isItalic: textSettings.isItalic,
-        hasBg: true, // White background for on-screen preview
+        isUnderline: false,
+        align: 'left',
+        hasBg: false, // Pure transparent! No white sticker!
         width: boxW,
         height: boxH,
         isTrueEdit: true,
-        origRect: [exactLeft, exactTop, exactLeft + width, exactTop + (cleanFontSize * 1.2)],
+        origRect: origRect,
         origText: originalText,
         pageIndex: currentPage - 1
     };
@@ -590,9 +669,6 @@ function replaceExistingPdfText(originalText, exactLeft, exactTop, width, fontSi
     pageEdits[currentPage].elements.push(replaceItem);
     renderOverlayElement(replaceItem);
     selectElement(replaceItem.id);
-
-    const textLayer = document.getElementById('pdfTextLayer');
-    if (textLayer) textLayer.classList.remove('active');
 
     setTimeout(() => {
         const domEl = document.getElementById(replaceItem.id);
@@ -1123,7 +1199,7 @@ function renderOverlayElement(item) {
     const overlay = document.getElementById('annotationOverlay');
     const el = document.createElement('div');
     el.id = item.id;
-    el.className = `anno-element anno-${item.type}${item.isTrueEdit ? ' is-trueedit' : ''}`;
+    el.className = `anno-element anno-${item.type}${item.isTrueEdit ? ' is-trueedit' : ''}${item.isOriginalImage ? ' is-original' : ''}`;
     el.style.left = item.x + 'px';
     el.style.top  = item.y + 'px';
 
@@ -1192,6 +1268,9 @@ function renderOverlayElement(item) {
         el.style.width  = item.width + 'px';
         el.style.height = item.height + 'px';
         el.style.opacity = item.opacity !== undefined ? item.opacity : 1.0;
+        if (item.isOriginalImage) {
+            el.title = 'Gambar Dokumen Asli (Geser untuk pindah posisi, ubah ukuran, atau klik ✕ untuk hapus)';
+        }
         
         const img = document.createElement('img');
         img.src = item.dataUrl;
@@ -1201,12 +1280,6 @@ function renderOverlayElement(item) {
         img.style.pointerEvents = 'none';
         if (item.rotation) img.style.transform = `rotate(${item.rotation}deg)`;
         el.appendChild(img);
-
-    } else if (item.type === 'detected_image') {
-        el.classList.add('anno-image-detected');
-        el.style.width  = item.width + 'px';
-        el.style.height = item.height + 'px';
-        el.title = 'Gambar Dokumen Asli (Geser untuk pindah posisi, atau klik ✕ untuk hapus)';
 
     } else if (item.type === 'shape') {
         el.style.width  = item.width + 'px';
