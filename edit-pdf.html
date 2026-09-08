@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Edit Dokumen PDF — Tambah Teks, Gambar, Bentuk & Coretan PDF Online</title>
     <meta name="description" content="Edit dokumen PDF lengkap secara online dengan zoom, kustomisasi font, warna pena bebas, sisipkan foto dengan resize, serta tambahkan aneka bentuk (kotak, lingkaran, panah).">
-    <link rel="stylesheet" href="style.css?v=10">
+    <link rel="stylesheet" href="style.css?v=11">
     <script src="theme.js?v=8"></script>
     <script src="https://unpkg.com/pdf-lib@1.17.1/dist/pdf-lib.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
@@ -342,15 +342,18 @@
                             <div class="sidebar-pages-list" id="sidebarPagesList"></div>
                         </aside>
 
-                        <div class="editor-viewport-wrapper" id="editorViewport">
-                            <div class="editor-canvas-stage" id="canvasStage">
-                                <canvas id="pdfBgCanvas"></canvas>
-                                <div id="pdfTextLayer" class="pdf-text-layer"></div>
-                                <canvas id="drawingCanvas"></canvas>
-                                <div id="annotationOverlay"></div>
+                        <!-- Viewport Container with Fixed Pinned Bottom Overlay -->
+                        <div class="editor-viewport-container">
+                            <div class="editor-viewport-wrapper" id="editorViewport">
+                                <div class="editor-canvas-stage" id="canvasStage">
+                                    <canvas id="pdfBgCanvas"></canvas>
+                                    <div id="pdfTextLayer" class="pdf-text-layer"></div>
+                                    <canvas id="drawingCanvas"></canvas>
+                                    <div id="annotationOverlay"></div>
+                                </div>
                             </div>
 
-                            <!-- Floating In-Preview Navigation Pill (iLovePDF Style) -->
+                            <!-- Floating In-Preview Navigation Pill (Pinned to Viewport Bottom Center) -->
                             <div class="preview-floating-nav" id="previewFloatingNav">
                                 <div class="floating-nav-group">
                                     <button class="floating-nav-btn" onclick="prevPage()" title="Halaman Sebelumnya (◀)">◀</button>
@@ -406,6 +409,6 @@
 
     <script src="gdrive-config.js?v=4"></script>
     <script src="gdrive-picker.js?v=4"></script>
-    <script src="edit-pdf.js?v=10"></script>
+    <script src="edit-pdf.js?v=11"></script>
 </body>
 </html>

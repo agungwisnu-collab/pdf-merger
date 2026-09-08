@@ -2788,18 +2788,33 @@ body {
     border-color: var(--primary);
 }
 
+/* Viewport Container for Pinned Bottom Overlay */
+.editor-viewport-container {
+    position: relative;
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    height: 75vh;
+    max-height: 75vh;
+    min-height: 600px;
+    overflow: hidden;
+}
+
 /* Canvas Viewport: Neutral Clean Desk Background */
 .editor-viewport-wrapper {
     background: #eaebef;
     border: 1px solid var(--border-subtle);
     border-radius: 12px;
-    padding: 32px 20px 24px 20px;
+    padding: 32px 20px 80px 20px;
     box-shadow: inset 0 2px 6px rgba(0, 0, 0, 0.05);
     overflow: auto;
-    max-height: 75vh;
+    width: 100%;
+    height: 100%;
+    flex: 1;
     display: flex;
-    flex-direction: column;
-    align-items: center;
+    justify-content: center;
+    align-items: flex-start;
     position: relative;
 }
 
@@ -2808,31 +2823,31 @@ body {
     box-shadow: inset 0 2px 8px rgba(0, 0, 0, 0.4);
 }
 
-/* Floating In-Preview Navigation Pill (iLovePDF Style) */
+/* Floating In-Preview Navigation Pill (Pinned to Viewport Bottom Center) */
 .preview-floating-nav {
-    position: sticky;
-    bottom: 16px;
-    margin-top: 18px;
-    z-index: 85;
+    position: absolute;
+    bottom: 20px;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 95;
     display: inline-flex;
     align-items: center;
     gap: 8px;
-    background: rgba(15, 23, 42, 0.88);
+    background: rgba(15, 23, 42, 0.92);
     backdrop-filter: blur(14px);
     -webkit-backdrop-filter: blur(14px);
-    padding: 6px 14px;
+    padding: 7px 16px;
     border-radius: 30px;
-    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.25), 0 2px 6px rgba(0, 0, 0, 0.15);
-    border: 1px solid rgba(255, 255, 255, 0.15);
+    box-shadow: 0 10px 28px rgba(0, 0, 0, 0.35), 0 2px 6px rgba(0, 0, 0, 0.15);
+    border: 1px solid rgba(255, 255, 255, 0.18);
     pointer-events: auto;
     user-select: none;
-    transition: transform 0.2s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.2s ease;
-    align-self: center;
+    transition: transform 0.18s cubic-bezier(0.4, 0, 0.2, 1), box-shadow 0.18s ease;
 }
 
 .preview-floating-nav:hover {
-    transform: scale(1.02);
-    box-shadow: 0 10px 28px rgba(0, 0, 0, 0.32);
+    transform: translateX(-50%) scale(1.03);
+    box-shadow: 0 12px 32px rgba(0, 0, 0, 0.42);
 }
 
 .floating-nav-group {
@@ -3361,12 +3376,17 @@ body {
 }
 
 /* Viewport Adjustments inside Workspace Body */
+.editor-workspace-body .editor-viewport-container {
+    flex: 1;
+    min-height: 600px;
+}
+
 .editor-workspace-body .editor-viewport-wrapper {
     flex: 1;
     border: none;
     border-radius: 0;
     background: var(--bg-subtle);
-    min-height: 600px;
+    min-height: 100%;
 }
 
 /* Segmented Button Group (Text Alignment) */
@@ -3429,5 +3449,15 @@ body {
 @media (max-width: 768px) {
     .editor-sidebar-pages {
         display: none;
+    }
+    .preview-floating-nav {
+        bottom: 12px;
+        padding: 5px 10px;
+        gap: 4px;
+        max-width: calc(100% - 24px);
+    }
+    .preview-floating-nav .floating-nav-btn {
+        width: 26px;
+        height: 26px;
     }
 }
