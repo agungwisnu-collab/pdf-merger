@@ -20,6 +20,8 @@ let currentZoom       = 1.0;
 let activeTool        = 'select'; // 'select' | 'text' | 'replaceText' | 'whiteout' | 'pen' | 'highlighter' | 'shape' | 'image'
 let selectedElementId = null;
 let pageDpr           = 1; // High-DPI screen pixel ratio for crisp rendering
+let basePageWidth     = 0;
+let basePageHeight    = 0;
 
 // Page Edits Store: { [pageNum]: { elements: [], deletedElements: [], drawingDataUrl: '' } }
 let pageEdits = {};
@@ -457,6 +459,14 @@ async function renderCurrentPage() {
     if (previewNavEl) previewNavEl.textContent = pageText;
     const page = await pdfDocJs.getPage(currentPage);
     const baseViewport = page.getViewport({ scale: 1.0 });
+    basePageWidth  = baseViewport.width;
+    basePageHeight = baseViewport.height;
+
+    const stage = document.getElementById('canvasStage');
+    if (stage) {
+        stage.style.width  = `${basePageWidth}px`;
+        stage.style.height = `${basePageHeight}px`;
+    }
 
     // 1. Render Base PDF Canvas at High-DPI (Crisp, zero-blur preview like genuine printed document)
     const dpr = Math.max(2, window.devicePixelRatio || 1);
@@ -864,24 +874,26 @@ function resetZoom() {
 
 function fitToWidth() {
     const viewport = document.getElementById('editorViewport');
-    const bgCanvas = document.getElementById('pdfBgCanvas');
-    if (!viewport || !bgCanvas) return;
+    if (!viewport || !basePageWidth) return;
 
-    const baseW = parseFloat(bgCanvas.style.width) || (bgCanvas.width / (pageDpr || 1));
-    if (!baseW) return;
-
-    const availableWidth = viewport.clientWidth - 56;
-    const fitScale = +(availableWidth / baseW).toFixed(2);
+    const availableWidth = viewport.clientWidth - 64;
+    const fitScale = +(availableWidth / basePageWidth).toFixed(2);
     currentZoom = Math.max(0.4, Math.min(2.5, fitScale));
     applyZoom();
 }
 
 function applyZoom() {
     const stage = document.getElementById('canvasStage');
+    const stageWrapper = document.getElementById('canvasStageWrapper');
     const display = document.getElementById('zoomDisplay');
     const previewDisplay = document.getElementById('previewZoomDisplay');
     if (stage) {
         stage.style.transform = `scale(${currentZoom})`;
+        stage.style.transformOrigin = '0 0';
+    }
+    if (stageWrapper && basePageWidth && basePageHeight) {
+        stageWrapper.style.width = `${Math.round(basePageWidth * currentZoom)}px`;
+        stageWrapper.style.height = `${Math.round(basePageHeight * currentZoom)}px`;
     }
     const zoomText = `${Math.round(currentZoom * 100)}%`;
     if (display) display.textContent = zoomText;
@@ -2280,7 +2292,9 @@ async function saveEditedPDF() {
     const rawName = (document.getElementById('outputNameSidebar')?.value || document.getElementById('outputName')?.value || 'edited_document').trim();
     const outputName = (rawName.endsWith('.pdf') ? rawName : rawName + '.pdf');
     const processBtn = document.getElementById('rightProcessTaskBtn');
+    const gdriveBtn  = document.getElementById('rightGDriveBtn');
     if (processBtn) processBtn.disabled = true;
+    if (gdriveBtn)  gdriveBtn.disabled = true;
 
     try {
         const finalBlob = await buildExportPdfBlob();
@@ -2302,6 +2316,7 @@ async function saveEditedPDF() {
         showStatus('❌ Error saat menyimpan edit: ' + err.message, 'error');
     } finally {
         if (processBtn) processBtn.disabled = false;
+        if (gdriveBtn)  gdriveBtn.disabled = false;
     }
 }
 
@@ -2312,7 +2327,9 @@ async function saveEditedToGDrive() {
     const rawName = (document.getElementById('outputNameSidebar')?.value || document.getElementById('outputName')?.value || 'edited_document').trim();
     const outputName = (rawName.endsWith('.pdf') ? rawName : rawName + '.pdf');
     const processBtn = document.getElementById('rightProcessTaskBtn');
+    const gdriveBtn  = document.getElementById('rightGDriveBtn');
     if (processBtn) processBtn.disabled = true;
+    if (gdriveBtn)  gdriveBtn.disabled = true;
 
     try {
         const finalBlob = await buildExportPdfBlob();
@@ -2340,6 +2357,7 @@ async function saveEditedToGDrive() {
         showStatus('❌ Error: ' + err.message, 'error');
     } finally {
         if (processBtn) processBtn.disabled = false;
+        if (gdriveBtn)  gdriveBtn.disabled = false;
     }
 }
 

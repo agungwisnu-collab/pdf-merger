@@ -2798,28 +2798,33 @@ body {
     overflow: hidden;
 }
 
-/* Canvas Viewport: Neutral Clean Desk Background */
+/* Canvas Viewport: Neutral Clean Desk Background (iLovePDF Style) */
 .editor-viewport-wrapper {
     background: #eaebef;
-    border: 1px solid var(--border-subtle);
-    border-radius: 12px;
-    padding: 32px 20px 80px 20px;
+    border: none;
+    border-radius: 0;
+    padding: 32px 32px 100px 32px;
     box-shadow: inset 0 2px 6px rgba(0, 0, 0, 0.05);
     overflow: auto;
     width: 100%;
     height: 100%;
     flex: 1;
-    display: flex;
-    justify-content: center;
-    align-items: flex-start;
+    display: block;
     position: relative;
-    /* Ensure left side content is always visible */
+    box-sizing: border-box;
     scroll-behavior: smooth;
 }
 
 [data-theme="dark"] .editor-viewport-wrapper {
-    background: #181c27;
+    background: #141824;
     box-shadow: inset 0 2px 8px rgba(0, 0, 0, 0.4);
+}
+
+/* Canvas Stage Wrapper: Centered container that matches scaled dimensions */
+.canvas-stage-wrapper {
+    margin: 0 auto;
+    position: relative;
+    flex-shrink: 0;
 }
 
 /* Floating In-Preview Navigation Pill (Pinned to Viewport Bottom Center) */
@@ -2906,12 +2911,14 @@ body {
 
 /* Genuine Paper Document Appearance with Authentic Depth & Crisp Edges */
 .editor-canvas-stage {
-    position: relative;
-    display: inline-block;
+    position: absolute;
+    top: 0;
+    left: 0;
+    display: block;
     background: #ffffff;
     border-radius: 2px;
     box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 10px 25px -5px rgba(0, 0, 0, 0.15), 0 0 1px rgba(0, 0, 0, 0.2);
-    transform-origin: top center;
+    transform-origin: 0 0;
     transition: transform 0.15s ease-out;
 }
 
@@ -3318,36 +3325,70 @@ body {
    When editor workspace is active, break out of narrow container
    ============================================================ */
 .edit-pdf-main {
-    max-width: 100% !important;
-    padding: 0 !important;
-    transition: max-width 0.3s ease;
+    transition: max-width 0.3s ease, padding 0.3s ease;
 }
 
 .edit-pdf-main.workspace-active {
-    max-width: 100% !important;
+    max-width: 100vw !important;
+    width: 100vw !important;
+    margin: 0 !important;
     padding: 0 !important;
+    height: calc(100vh - 58px);
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
 }
 
 .edit-pdf-container {
-    max-width: 1100px;
-    transition: max-width 0.3s ease;
+    transition: max-width 0.3s ease, padding 0.3s ease;
 }
 
 .edit-pdf-container.workspace-active {
     max-width: 100% !important;
-    padding: 0 16px !important;
+    width: 100% !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    border: none !important;
+    border-radius: 0 !important;
+    box-shadow: none !important;
+    background: transparent !important;
+    height: 100%;
+    flex: 1;
+    display: flex;
+    flex-direction: column;
 }
 
 /* Hide header and upload section when workspace is active */
 .workspace-active .header,
 .workspace-active .upload-area,
 .workspace-active .footer {
-    display: none;
+    display: none !important;
 }
 
 /* The fullwidth workspace itself */
 .editor-fullwidth-workspace {
     width: 100%;
+    height: 100%;
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+}
+
+.editor-main-panel {
+    width: 100%;
+    height: 100%;
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+}
+
+.editor-toolbar-box {
+    flex-shrink: 0;
+    background: var(--bg-card);
+    border-bottom: 1px solid var(--border-subtle);
+    z-index: 20;
 }
 
 /* ============================================================
@@ -3355,15 +3396,18 @@ body {
    ============================================================ */
 .editor-workspace-body {
     display: flex;
-    gap: 0;
+    flex-direction: row;
+    align-items: stretch;
+    flex: 1;
+    min-height: 0;
+    height: 100%;
+    width: 100%;
     position: relative;
     background: var(--bg-card);
-    border: 1px solid var(--border-subtle);
-    border-radius: 12px;
+    border: none;
+    border-radius: 0;
     overflow: hidden;
-    min-height: 600px;
-    height: calc(100vh - 180px);
-    box-shadow: 0 8px 30px rgba(0, 0, 0, 0.04);
+    box-shadow: none;
 }
 
 /* Left Pages Sidebar */
@@ -3458,15 +3502,24 @@ body {
 /* Viewport Adjustments inside Workspace Body */
 .editor-workspace-body .editor-viewport-container {
     flex: 1;
-    min-height: 600px;
+    min-width: 0;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    position: relative;
+    overflow: hidden;
 }
 
 .editor-workspace-body .editor-viewport-wrapper {
     flex: 1;
     border: none;
     border-radius: 0;
-    background: var(--bg-subtle);
+    background: #eaebef;
     min-height: 100%;
+}
+
+[data-theme="dark"] .editor-workspace-body .editor-viewport-wrapper {
+    background: #141824;
 }
 
 /* Segmented Button Group (Text Alignment) */
