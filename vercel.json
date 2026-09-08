@@ -2,10 +2,24 @@
   "cleanUrls": false,
   "trailingSlash": false,
   "rewrites": [
-    {
-      "source": "/api/true-edit",
-      "destination": "/api/true_edit"
-    }
+    { "source": "/api/true-edit", "destination": "/api/true_edit" },
+    { "source": "/edit-pdf", "destination": "/edit-pdf.html" },
+    { "source": "/merge-pdf", "destination": "/merge-pdf.html" },
+    { "source": "/split-pdf", "destination": "/split-pdf.html" },
+    { "source": "/compress-pdf", "destination": "/compress-pdf.html" },
+    { "source": "/signature", "destination": "/signature.html" },
+    { "source": "/watermark-pdf", "destination": "/watermark-pdf.html" },
+    { "source": "/page-number-pdf", "destination": "/page-number-pdf.html" },
+    { "source": "/organize-pdf", "destination": "/organize-pdf.html" },
+    { "source": "/rotate-pdf", "destination": "/rotate-pdf.html" },
+    { "source": "/crop-pdf", "destination": "/crop-pdf.html" },
+    { "source": "/image-to-pdf", "destination": "/image-to-pdf.html" },
+    { "source": "/pdf-to-image", "destination": "/pdf-to-image.html" },
+    { "source": "/word-to-pdf", "destination": "/word-to-pdf.html" },
+    { "source": "/excel-to-pdf", "destination": "/excel-to-pdf.html" },
+    { "source": "/ocr-pdf", "destination": "/ocr-pdf.html" },
+    { "source": "/protect-pdf", "destination": "/protect-pdf.html" },
+    { "source": "/unlock-pdf", "destination": "/unlock-pdf.html" }
   ],
   "headers": [
     {
