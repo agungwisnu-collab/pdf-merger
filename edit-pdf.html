@@ -176,26 +176,47 @@
                             <div class="prop-item">
                                 <span class="prop-label">Font:</span>
                                 <select id="textFontFamily" class="prop-select" onchange="updateSelectedTextProp('fontFamily', this.value)">
-                                    <option value="Plus Jakarta Sans, sans-serif" selected>Plus Jakarta Sans</option>
-                                    <option value="Arial, sans-serif">Arial</option>
+                                    <option value="Arial, sans-serif" selected>Arial</option>
                                     <option value="'Times New Roman', serif">Times New Roman</option>
                                     <option value="'Courier New', monospace">Courier New</option>
+                                    <option value="Verdana, sans-serif">Verdana</option>
                                     <option value="Georgia, serif">Georgia</option>
+                                    <option value="Calibri, Arial, sans-serif">Calibri</option>
+                                    <option value="'Trebuchet MS', sans-serif">Trebuchet MS</option>
                                     <option value="'Comic Sans MS', cursive">Comic Sans</option>
+                                    <option value="Impact, sans-serif">Impact</option>
+                                    <option value="Plus Jakarta Sans, sans-serif">Plus Jakarta Sans</option>
                                 </select>
                             </div>
-                            <div class="prop-item">
+                            <div class="prop-item font-size-ctrl-wrap">
                                 <span class="prop-label">Ukuran:</span>
-                                <select id="textFontSize" class="prop-select" onchange="updateSelectedTextProp('fontSize', parseInt(this.value))">
-                                    <option value="12">12 px</option>
-                                    <option value="14">14 px</option>
-                                    <option value="16" selected>16 px</option>
-                                    <option value="18">18 px</option>
-                                    <option value="20">20 px</option>
-                                    <option value="24">24 px</option>
-                                    <option value="30">30 px</option>
-                                    <option value="36">36 px</option>
-                                    <option value="48">48 px</option>
+                                <div class="font-size-stepper">
+                                    <button type="button" class="stepper-btn" onclick="stepFontSize(-1)" title="Perkecil Font (−)">−</button>
+                                    <input type="number" id="textFontSizeInput" class="stepper-input" value="16" min="4" max="250" step="0.5" oninput="onFontSizeInputChange(this.value)" onchange="onFontSizeInputChange(this.value)" title="Ketik ukuran font bebas" />
+                                    <button type="button" class="stepper-btn" onclick="stepFontSize(1)" title="Perbesar Font (+)">+</button>
+                                </div>
+                                <select id="textFontSize" class="prop-select size-preset-select" onchange="onFontSizePresetChange(this.value)" title="Pilihan preset ukuran">
+                                    <option value="4">4</option>
+                                    <option value="6">6</option>
+                                    <option value="8">8</option>
+                                    <option value="9">9</option>
+                                    <option value="10">10</option>
+                                    <option value="11">11</option>
+                                    <option value="12">12</option>
+                                    <option value="14">14</option>
+                                    <option value="16" selected>16</option>
+                                    <option value="18">18</option>
+                                    <option value="20">20</option>
+                                    <option value="24">24</option>
+                                    <option value="28">28</option>
+                                    <option value="32">32</option>
+                                    <option value="36">36</option>
+                                    <option value="48">48</option>
+                                    <option value="64">64</option>
+                                    <option value="72">72</option>
+                                    <option value="96">96</option>
+                                    <option value="144">144</option>
+                                    <option value="200">200</option>
                                 </select>
                             </div>
                             <div class="prop-item">
@@ -405,7 +426,7 @@
                                     <div class="right-layers-section">
                                         <div class="layers-section-header">
                                             <span class="layers-title">Lapisan (<span id="activeElementsCount">0</span>)</span>
-                                            <button type="button" class="btn-clear-edits" onclick="clearCurrentPageAnnotations()" title="Hapus semua editan pada halaman ini">Reset Hal</button>
+                                            <button type="button" class="btn-clear-edits" onclick="resetCurrentPageToOriginal()" title="Kembalikan halaman ini ke dokumen asli">↩ Reset Dokumen Asli</button>
                                         </div>
                                         <div class="right-layers-list" id="rightLayersList">
                                             <div class="layers-empty-state">

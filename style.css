@@ -2361,20 +2361,23 @@ body {
 .editor-main-panel {
     display: flex;
     flex-direction: column;
-    gap: 12px;
+    gap: 0;
     width: 100%;
-    margin-top: 14px;
+    margin-top: 0;
 }
 
 .editor-toolbar-box {
     background: var(--bg-card);
-    border: 1px solid var(--border-card);
-    border-radius: 16px;
-    padding: 12px 16px;
-    box-shadow: var(--shadow-sm);
+    border: none;
+    border-bottom: 1px solid var(--border-subtle);
+    border-radius: 0;
+    padding: 4px 12px;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.03);
     display: flex;
     flex-direction: column;
-    gap: 10px;
+    gap: 4px;
+    z-index: 20;
+    flex-shrink: 0;
 }
 
 /* ==================== iLovePDF UI & Toolbar Redesign ==================== */
@@ -2382,32 +2385,35 @@ body {
     display: flex;
     align-items: center;
     justify-content: space-between;
-    gap: 16px;
-    padding: 6px 4px;
-    flex-wrap: wrap;
+    gap: 10px;
+    padding: 2px 0;
+    height: 40px;
+    box-sizing: border-box;
 }
 
 /* Left Group: File Info & Back */
 .ilove-left-group {
     display: flex;
     align-items: center;
-    gap: 12px;
-    min-width: 200px;
+    gap: 8px;
+    min-width: 160px;
 }
 
 .ilove-btn-back {
     display: inline-flex;
     align-items: center;
-    gap: 6px;
-    padding: 7px 12px;
+    gap: 4px;
+    padding: 4px 8px;
     background: var(--bg-subtle);
     border: 1px solid var(--border-subtle);
-    border-radius: 8px;
+    border-radius: 6px;
     color: var(--text-main);
-    font-size: 0.82rem;
+    font-size: 0.76rem;
     font-weight: 700;
     cursor: pointer;
     transition: all 0.15s ease;
+    height: 30px;
+    white-space: nowrap;
 }
 
 .ilove-btn-back:hover {
@@ -2419,12 +2425,12 @@ body {
 .ilove-doc-info {
     display: flex;
     flex-direction: column;
-    max-width: 170px;
+    max-width: 150px;
     overflow: hidden;
 }
 
 .ilove-doc-title {
-    font-size: 0.88rem;
+    font-size: 0.8rem;
     font-weight: 700;
     color: var(--text-main);
     white-space: nowrap;
@@ -2433,46 +2439,47 @@ body {
 }
 
 .ilove-doc-meta {
-    font-size: 0.74rem;
+    font-size: 0.68rem;
     color: var(--text-muted);
 }
 
-/* Center Tools: The 4 Core Tools (iLovePDF Clean Tabs) */
+/* Center Tools: Compact Horizontal Buttons (iLovePDF Clean Tabs) */
 .ilove-center-tools {
     display: flex;
     align-items: center;
-    gap: 6px;
+    gap: 4px;
     background: var(--bg-subtle);
-    padding: 4px 6px;
-    border-radius: 12px;
+    padding: 2px 4px;
+    border-radius: 8px;
     border: 1px solid var(--border-subtle);
 }
 
 .ilove-tool-btn {
     display: inline-flex;
-    flex-direction: column;
+    flex-direction: row;
     align-items: center;
     justify-content: center;
-    gap: 3px;
-    min-width: 68px;
-    padding: 6px 12px;
-    border-radius: 8px;
+    gap: 5px;
+    padding: 4px 10px;
+    border-radius: 6px;
     background: transparent;
     border: 1px solid transparent;
     color: var(--text-muted);
     font-family: inherit;
     cursor: pointer;
-    transition: all 0.18s cubic-bezier(0.4, 0, 0.2, 1);
+    transition: all 0.15s ease;
     user-select: none;
+    height: 30px;
+    box-sizing: border-box;
 }
 
 .ilove-tool-icon {
-    font-size: 1.15rem;
+    font-size: 0.95rem;
     line-height: 1;
 }
 
 .ilove-tool-name {
-    font-size: 0.75rem;
+    font-size: 0.76rem;
     font-weight: 700;
     letter-spacing: 0.01em;
 }
@@ -2481,28 +2488,26 @@ body {
     background: var(--bg-card);
     color: var(--text-main);
     border-color: var(--border-subtle);
-    transform: translateY(-1px);
 }
 
 .ilove-tool-btn.active {
     background: #ffffff;
-    color: var(--primary);
-    border-color: rgba(99, 102, 241, 0.3);
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+    color: #e5322d;
+    border-color: rgba(229, 50, 45, 0.3);
+    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.06);
 }
 
 [data-theme="dark"] .ilove-tool-btn.active {
     background: var(--bg-card);
-    color: var(--primary);
-    border-color: var(--primary);
+    color: #f87171;
+    border-color: #f87171;
 }
 
 /* Right Group: Undo, Zoom, Page Nav & iLovePDF Red CTA */
 .ilove-right-group {
     display: flex;
     align-items: center;
-    gap: 8px;
-    flex-wrap: wrap;
+    gap: 6px;
 }
 
 .ilove-history-wrap {
@@ -2510,22 +2515,24 @@ body {
     align-items: center;
     gap: 2px;
     background: var(--bg-subtle);
-    padding: 3px;
-    border-radius: 8px;
+    padding: 2px;
+    border-radius: 6px;
     border: 1px solid var(--border-subtle);
+    height: 30px;
+    box-sizing: border-box;
 }
 
 .ilove-ctrl-btn {
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    width: 30px;
-    height: 30px;
-    border-radius: 6px;
+    width: 26px;
+    height: 26px;
+    border-radius: 4px;
     border: none;
     background: transparent;
     color: var(--text-main);
-    font-size: 1.1rem;
+    font-size: 1rem;
     font-weight: 700;
     cursor: pointer;
     transition: background 0.15s, color 0.15s;
@@ -2545,21 +2552,23 @@ body {
 .ilove-page-pill {
     display: inline-flex;
     align-items: center;
-    gap: 3px;
+    gap: 2px;
     background: var(--bg-subtle);
-    padding: 3px 6px;
-    border-radius: 8px;
+    padding: 2px 4px;
+    border-radius: 6px;
     border: 1px solid var(--border-subtle);
+    height: 30px;
+    box-sizing: border-box;
 }
 
 .ilove-zoom-btn {
-    width: 26px;
-    height: 26px;
-    border-radius: 6px;
+    width: 22px;
+    height: 22px;
+    border-radius: 4px;
     border: none;
     background: transparent;
     color: var(--text-main);
-    font-size: 0.92rem;
+    font-size: 0.85rem;
     font-weight: 700;
     cursor: pointer;
     display: inline-flex;
@@ -2575,24 +2584,24 @@ body {
 
 .ilove-zoom-btn.fit-btn {
     width: auto;
-    padding: 0 6px;
-    font-size: 0.72rem;
+    padding: 0 5px;
+    font-size: 0.68rem;
 }
 
 .ilove-zoom-text {
-    font-size: 0.78rem;
+    font-size: 0.74rem;
     font-weight: 700;
     color: var(--text-main);
-    min-width: 44px;
+    min-width: 40px;
     text-align: center;
     cursor: pointer;
 }
 
 .ilove-page-text {
-    font-size: 0.78rem;
+    font-size: 0.74rem;
     font-weight: 700;
     color: var(--text-main);
-    min-width: 48px;
+    min-width: 42px;
     text-align: center;
 }
 
@@ -2683,46 +2692,128 @@ body {
     line-height: 1;
 }
 
-/* Dynamic Property Bar */
+/* Dynamic Property Bar (Sleek iLovePDF Sub-Toolbar) */
 .editor-props-bar {
     display: flex;
     align-items: center;
-    flex-wrap: wrap;
-    gap: 12px;
-    padding: 8px 12px;
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    gap: 8px;
+    padding: 3px 8px;
     background: var(--bg-subtle);
-    border-radius: 10px;
-    border: 1px dashed var(--border-subtle);
-    font-size: 0.84rem;
+    border-radius: 6px;
+    border: 1px solid var(--border-subtle);
+    font-size: 0.78rem;
+    height: 34px;
+    box-sizing: border-box;
+    flex-shrink: 0;
+}
+
+.editor-props-bar::-webkit-scrollbar {
+    height: 3px;
+}
+.editor-props-bar::-webkit-scrollbar-thumb {
+    background: var(--border-subtle);
+    border-radius: 2px;
 }
 
 .prop-item {
     display: inline-flex;
     align-items: center;
-    gap: 6px;
+    gap: 4px;
+    flex-shrink: 0;
 }
 
 .prop-label {
-    font-size: 0.78rem;
+    font-size: 0.72rem;
     font-weight: 700;
     color: var(--text-muted);
 }
 
 .prop-select {
-    padding: 5px 8px;
-    border-radius: 8px;
+    padding: 2px 6px;
+    border-radius: 6px;
     border: 1px solid var(--border-subtle);
     background: var(--bg-card);
     color: var(--text-main);
-    font-size: 0.82rem;
+    font-size: 0.76rem;
     font-family: inherit;
     outline: none;
     cursor: pointer;
+    height: 26px;
+    box-sizing: border-box;
+}
+
+/* Font Size Stepper Control */
+.font-size-ctrl-wrap {
+    display: inline-flex;
+    align-items: center;
+    gap: 3px;
+}
+
+.font-size-stepper {
+    display: inline-flex;
+    align-items: center;
+    border: 1px solid var(--border-subtle);
+    border-radius: 6px;
+    overflow: hidden;
+    background: var(--bg-card);
+    height: 26px;
+    box-sizing: border-box;
+}
+
+.stepper-btn {
+    width: 20px;
+    height: 100%;
+    border: none;
+    background: transparent;
+    color: var(--text-main);
+    font-size: 0.85rem;
+    font-weight: 700;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    transition: background 0.15s;
+    user-select: none;
+}
+
+.stepper-btn:hover {
+    background: var(--bg-subtle);
+    color: var(--primary);
+}
+
+.stepper-input {
+    width: 36px;
+    height: 100%;
+    border: none;
+    border-left: 1px solid var(--border-subtle);
+    border-right: 1px solid var(--border-subtle);
+    text-align: center;
+    font-size: 0.76rem;
+    font-weight: 700;
+    color: var(--text-main);
+    background: transparent;
+    outline: none;
+    padding: 0;
+    -moz-appearance: textfield;
+}
+
+.stepper-input::-webkit-outer-spin-button,
+.stepper-input::-webkit-inner-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
+}
+
+.size-preset-select {
+    width: 48px;
+    height: 26px;
+    padding: 2px 2px;
 }
 
 .prop-color-input {
-    width: 28px;
-    height: 28px;
+    width: 24px;
+    height: 24px;
     padding: 0;
     border: 1.5px solid var(--border-subtle);
     border-radius: 50%;
@@ -2742,21 +2833,21 @@ body {
 .color-palette-wrap {
     display: flex;
     align-items: center;
-    gap: 5px;
+    gap: 4px;
 }
 
 .color-dot {
-    width: 22px;
-    height: 22px;
+    width: 18px;
+    height: 18px;
     border-radius: 50%;
     border: 2px solid transparent;
     cursor: pointer;
     transition: transform 0.15s, border-color 0.15s;
-    box-shadow: 0 1px 3px rgba(0,0,0,0.15);
+    box-shadow: 0 1px 2px rgba(0,0,0,0.15);
 }
 
 .color-dot:hover {
-    transform: scale(1.18);
+    transform: scale(1.2);
 }
 
 .color-dot.active {
@@ -2766,14 +2857,19 @@ body {
 }
 
 .editor-toggle-btn {
-    padding: 5px 10px;
-    border-radius: 8px;
+    width: 26px;
+    height: 26px;
+    padding: 0;
+    border-radius: 6px;
     border: 1px solid var(--border-subtle);
     background: var(--bg-card);
     color: var(--text-main);
-    font-size: 0.82rem;
+    font-size: 0.78rem;
     font-weight: 700;
     cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
     transition: all 0.15s;
 }
 
@@ -3324,6 +3420,21 @@ body {
    Full-Width Workspace Layout (iLovePDF Style)
    When editor workspace is active, break out of narrow container
    ============================================================ */
+html.workspace-active,
+body.workspace-active {
+    overflow: hidden !important;
+    height: 100vh !important;
+    max-height: 100vh !important;
+    padding: 0 !important;
+    margin: 0 !important;
+}
+
+.workspace-active .site-navbar {
+    height: 50px !important;
+    min-height: 50px !important;
+    flex-shrink: 0;
+}
+
 .edit-pdf-main {
     transition: max-width 0.3s ease, padding 0.3s ease;
 }
@@ -3333,8 +3444,9 @@ body {
     width: 100vw !important;
     margin: 0 !important;
     padding: 0 !important;
-    height: calc(100vh - 58px);
-    overflow: hidden;
+    height: calc(100vh - 50px) !important;
+    max-height: calc(100vh - 50px) !important;
+    overflow: hidden !important;
     display: flex;
     flex-direction: column;
 }

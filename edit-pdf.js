@@ -219,6 +219,8 @@ async function handleFileSelect(file) {
         document.getElementById('workspaceSection').classList.remove('hidden');
         document.getElementById('mainWrapper')?.classList.add('workspace-active');
         document.getElementById('mainContainer')?.classList.add('workspace-active');
+        document.body.classList.add('workspace-active');
+        document.documentElement.classList.add('workspace-active');
 
         setActiveTool('select');
         await renderCurrentPage();
@@ -242,6 +244,8 @@ function clearFile() {
     document.getElementById('uploadSection').classList.remove('hidden');
     document.getElementById('mainWrapper')?.classList.remove('workspace-active');
     document.getElementById('mainContainer')?.classList.remove('workspace-active');
+    document.body.classList.remove('workspace-active');
+    document.documentElement.classList.remove('workspace-active');
     hideStatus();
     hideProgress();
 }
@@ -364,7 +368,7 @@ function showPropsForSelectedElement() {
         if (fontSelect && item.fontFamily) {
             let found = false;
             for (let opt of fontSelect.options) {
-                if (opt.value === item.fontFamily || (item.fontFamily.toLowerCase().includes('times') && opt.value.includes('Times')) || (item.fontFamily.toLowerCase().includes('courier') && opt.value.includes('Courier')) || (item.fontFamily.toLowerCase().includes('arial') && opt.value.includes('Arial'))) {
+                if (opt.value === item.fontFamily || (item.fontFamily.toLowerCase().includes('times') && opt.value.includes('Times')) || (item.fontFamily.toLowerCase().includes('courier') && opt.value.includes('Courier')) || (item.fontFamily.toLowerCase().includes('arial') && opt.value.includes('Arial')) || (item.fontFamily.toLowerCase().includes('calibri') && opt.value.includes('Calibri')) || (item.fontFamily.toLowerCase().includes('verdana') && opt.value.includes('Verdana')) || (item.fontFamily.toLowerCase().includes('trebuchet') && opt.value.includes('Trebuchet'))) {
                     fontSelect.value = opt.value;
                     found = true;
                     break;
@@ -375,23 +379,28 @@ function showPropsForSelectedElement() {
             }
         }
 
+        const sizeInput = document.getElementById('textFontSizeInput');
         const sizeSelect = document.getElementById('textFontSize');
-        if (sizeSelect && item.fontSize) {
-            const rSize = Math.round(item.fontSize);
-            let found = false;
-            for (let opt of sizeSelect.options) {
-                if (parseInt(opt.value) === rSize) {
-                    sizeSelect.value = opt.value;
-                    found = true;
-                    break;
+        if (item.fontSize) {
+            const displaySize = Math.round(item.fontSize * 10) / 10;
+            if (sizeInput) sizeInput.value = displaySize;
+            if (sizeSelect) {
+                const rSize = Math.round(item.fontSize);
+                let found = false;
+                for (let opt of sizeSelect.options) {
+                    if (parseInt(opt.value) === rSize) {
+                        sizeSelect.value = opt.value;
+                        found = true;
+                        break;
+                    }
                 }
-            }
-            if (!found) {
-                const opt = document.createElement('option');
-                opt.value = rSize;
-                opt.textContent = `${rSize} px`;
-                opt.selected = true;
-                sizeSelect.appendChild(opt);
+                if (!found) {
+                    const opt = document.createElement('option');
+                    opt.value = rSize;
+                    opt.textContent = `${rSize}`;
+                    opt.selected = true;
+                    sizeSelect.appendChild(opt);
+                }
             }
         }
 
@@ -692,7 +701,7 @@ function detectFontProperties(fontName, styleObj) {
     const cssFamily = (styleObj?.fontFamily || '').toLowerCase();
 
     let fontFamily = 'Arial, sans-serif';
-    if (rawName.includes('times') || rawName.includes('serif') || rawName.includes('garamond') || rawName.includes('georgia') || rawName.includes('cambria') || cssFamily.includes('serif')) {
+    if (rawName.includes('times') || rawName.includes('serif') || rawName.includes('garamond') || rawName.includes('cambria')) {
         fontFamily = "'Times New Roman', serif";
     } else if (rawName.includes('courier') || rawName.includes('mono') || rawName.includes('consolas') || cssFamily.includes('monospace')) {
         fontFamily = "'Courier New', monospace";
@@ -702,6 +711,12 @@ function detectFontProperties(fontName, styleObj) {
         fontFamily = "Georgia, serif";
     } else if (rawName.includes('calibri')) {
         fontFamily = "Calibri, Arial, sans-serif";
+    } else if (rawName.includes('verdana')) {
+        fontFamily = "Verdana, sans-serif";
+    } else if (rawName.includes('trebuchet')) {
+        fontFamily = "'Trebuchet MS', sans-serif";
+    } else if (rawName.includes('impact')) {
+        fontFamily = "Impact, sans-serif";
     } else if (rawName.includes('helvetica') || rawName.includes('arial') || rawName.includes('sans') || cssFamily.includes('sans-serif')) {
         fontFamily = "Arial, sans-serif";
     } else if (styleObj?.fontFamily) {
@@ -931,18 +946,20 @@ function saveCurrentPageEdits() {
     if (drawCanvas) pageEdits[currentPage].drawingDataUrl = drawCanvas.toDataURL();
 }
 
-function clearCurrentPageAnnotations() {
-    if (!confirm('Hapus seluruh editan (teks, gambar, bentuk, dan coretan) pada halaman ini?')) return;
+async function resetCurrentPageToOriginal() {
+    if (!confirm('Kembalikan halaman ini ke dokumen asli? Semua editan teks, gambar, bentuk, dan coretan pada halaman ini akan dibatalkan.')) return;
     
     saveStateForUndo();
-    if (pageEdits[currentPage]) {
-        pageEdits[currentPage] = { elements: [] };
-    }
-    const drawCanvas = document.getElementById('drawingCanvas');
-    const ctx = drawCanvas.getContext('2d');
-    ctx.clearRect(0, 0, drawCanvas.width, drawCanvas.height);
-    document.getElementById('annotationOverlay').innerHTML = '';
+    pageEdits[currentPage] = { elements: [], deletedElements: [], drawingDataUrl: '' };
     deselectAllElements();
+    hideActionCard();
+    await renderCurrentPage();
+    showStatus('✅ Halaman berhasil dikembalikan ke kondisi asli.', 'success');
+}
+
+// Alias for compatibility
+function clearCurrentPageAnnotations() {
+    resetCurrentPageToOriginal();
 }
 
 // ─── Freehand Drawing & Highlighter Engine ──────────────────────
@@ -1096,6 +1113,61 @@ function updateSelectedTextProp(prop, val) {
         saveStateForUndo();
         item[prop] = val;
         applyTextStyleToDOM(item);
+
+        const el = document.getElementById(item.id);
+        const textDiv = el?.querySelector('.editable-text-content');
+        if (textDiv && el) {
+            const neededW = Math.max(20, textDiv.scrollWidth + 16);
+            if (neededW > item.width || prop === 'fontSize' || prop === 'fontFamily') {
+                item.width = Math.max(neededW, item.width || 20);
+                el.style.width = item.width + 'px';
+            }
+            item.height = el.offsetHeight;
+        }
+        updateActionCardPosition(el, item);
+    }
+}
+
+function onFontSizeInputChange(val) {
+    const num = parseFloat(val);
+    if (!isNaN(num) && num >= 4 && num <= 250) {
+        updateSelectedTextProp('fontSize', num);
+        const presetSelect = document.getElementById('textFontSize');
+        if (presetSelect) {
+            const r = Math.round(num);
+            let matched = false;
+            for (let opt of presetSelect.options) {
+                if (parseInt(opt.value) === r) {
+                    presetSelect.value = opt.value;
+                    matched = true;
+                    break;
+                }
+            }
+            if (!matched) {
+                const opt = document.createElement('option');
+                opt.value = r;
+                opt.textContent = `${r}`;
+                opt.selected = true;
+                presetSelect.appendChild(opt);
+            }
+        }
+    }
+}
+
+function stepFontSize(delta) {
+    const input = document.getElementById('textFontSizeInput');
+    const cur = parseFloat(input?.value) || textSettings.fontSize || 16;
+    const nextVal = Math.max(4, Math.min(250, Math.round((cur + delta) * 2) / 2));
+    if (input) input.value = nextVal;
+    onFontSizeInputChange(nextVal);
+}
+
+function onFontSizePresetChange(val) {
+    const num = parseFloat(val);
+    if (!isNaN(num)) {
+        const input = document.getElementById('textFontSizeInput');
+        if (input) input.value = num;
+        updateSelectedTextProp('fontSize', num);
     }
 }
 
