@@ -175,16 +175,7 @@ body {
 }
 
 .brand-badge {
-    display: inline-block;
-    font-size: 0.65rem;
-    font-weight: 700;
-    text-transform: uppercase;
-    letter-spacing: 0.05em;
-    padding: 2px 6px;
-    border-radius: 4px;
-    background: var(--primary-light);
-    color: var(--primary);
-    margin-left: 4px;
+    display: none !important;
 }
 
 /* Nav Tabs */
@@ -2369,13 +2360,14 @@ body {
 .editor-toolbar-box {
     background: var(--bg-card);
     border: none;
+    border-top: 1px solid var(--border-subtle);
     border-bottom: 1px solid var(--border-subtle);
     border-radius: 0;
-    padding: 4px 12px;
-    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.03);
+    padding: 12px 20px 10px 20px;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.03);
     display: flex;
     flex-direction: column;
-    gap: 4px;
+    gap: 8px;
     z-index: 20;
     flex-shrink: 0;
 }
@@ -3430,9 +3422,18 @@ body.workspace-active {
 }
 
 .workspace-active .site-navbar {
-    height: 50px !important;
-    min-height: 50px !important;
+    height: 56px !important;
+    min-height: 56px !important;
     flex-shrink: 0;
+}
+
+.workspace-active .site-navbar .nav-container {
+    padding: 0 24px !important;
+    height: 100% !important;
+    box-sizing: border-box !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: space-between !important;
 }
 
 .edit-pdf-main {
@@ -3444,8 +3445,8 @@ body.workspace-active {
     width: 100vw !important;
     margin: 0 !important;
     padding: 0 !important;
-    height: calc(100vh - 50px) !important;
-    max-height: calc(100vh - 50px) !important;
+    height: calc(100vh - 56px) !important;
+    max-height: calc(100vh - 56px) !important;
     overflow: hidden !important;
     display: flex;
     flex-direction: column;
@@ -3755,13 +3756,7 @@ body.workspace-active {
 }
 
 .right-sidebar-badge {
-    font-size: 0.65rem;
-    font-weight: 800;
-    color: #ffffff;
-    background: #e5322d;
-    padding: 2px 7px;
-    border-radius: 6px;
-    letter-spacing: 0.05em;
+    display: none !important;
 }
 
 .right-sidebar-body {
