@@ -6,6 +6,7 @@
     <title>OCR PDF — Ekstrak &amp; Salin Teks dari PDF Scan Online Gratis</title>
     <link rel="stylesheet" href="style.css">
     <script src="theme.js"></script>
+    <script src="https://unpkg.com/pdf-lib@1.17.1/dist/pdf-lib.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
 </head>
@@ -70,10 +71,10 @@
     </nav>
 
     <main class="main-wrapper">
-        <div class="container" style="max-width: 860px;">
-            <div class="header">
-                <h1>🔍 OCR PDF — AI Text Recognition</h1>
-                <p>Ekstrak dan salin teks dari dokumen PDF hasil scan atau foto menggunakan kecerdasan AI.<br>Berjalan <strong>100% privat di browser Anda</strong>.</p>
+        <div class="container" style="max-width: 1100px;">
+            <div class="header" id="ocrHeader">
+                <h1>🔍 Make PDF Searchable (OCR)</h1>
+                <p>Ubah file PDF hasil scan/gambar menjadi dokumen PDF yang <strong>dapat dicari (Ctrl+F)</strong> dan <strong>diseleksi teksnya</strong>.<br>Berjalan <strong>100% privat &amp; aman di browser Anda</strong> tanpa unggah data ke server luar.</p>
             </div>
 
             <!-- Upload Area -->
@@ -91,66 +92,143 @@
                 </div>
             </div>
 
-            <!-- Workspace Section -->
+            <!-- Workspace Section (iLovePDF 2-Column Layout) -->
             <div id="workspaceSection" class="hidden">
-                <div class="file-section-header">
-                    <div>
-                        <h3 id="docTitle">📄 document.pdf</h3>
-                        <p id="docMeta" style="font-size: 0.8rem; color: var(--text-muted);">5 Halaman · 1.2 MB</p>
-                    </div>
-                    <button class="btn btn-danger-outline btn-sm" onclick="clearFile()">🔄 Ganti Dokumen</button>
-                </div>
-
-                <div class="output-section" style="margin-top: 16px;">
-                    <div class="settings-grid">
-                        <div class="setting-group">
-                            <label for="ocrLang">🌐 Bahasa Dokumen:</label>
-                            <select id="ocrLang" class="setting-select">
-                                <option value="ind+eng" selected>Bahasa Indonesia &amp; Inggris</option>
-                                <option value="ind">Bahasa Indonesia</option>
-                                <option value="eng">English</option>
-                            </select>
-                        </div>
-                        <div class="setting-group">
-                            <label for="ocrPages">📑 Halaman yang Dipindai:</label>
-                            <select id="ocrPages" class="setting-select">
-                                <option value="all" selected>Semua Halaman</option>
-                                <option value="first">Hanya Halaman 1</option>
-                            </select>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="action-row">
-                    <button class="btn btn-primary btn-full btn-large" id="startOcrBtn" onclick="runOCR()">
-                        🔍 Mulai Pemindaian Teks AI (OCR)
+                <!-- Topbar Summary -->
+                <div class="ocr-topbar">
+                    <button class="ilove-btn-back" onclick="clearFile()" title="Ganti Dokumen">
+                        <span style="font-size: 1.1rem; line-height: 1;">←</span>
+                        <span>Ganti Dokumen</span>
                     </button>
+                    <div class="ocr-doc-summary">
+                        <span class="ocr-doc-icon">📄</span>
+                        <span id="docTitle" class="ocr-doc-name">document.pdf</span>
+                        <span id="docMeta" class="ocr-doc-badge">Memuat...</span>
+                    </div>
                 </div>
 
-                <!-- OCR Result Box -->
-                <div id="ocrResultWrap" class="ocr-result-wrap hidden">
-                    <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px;">
-                        <h4 style="font-size: 0.95rem; font-weight: 700; color: var(--text-main);">📝 Hasil Ekstraksi Teks:</h4>
-                        <div style="display: flex; gap: 8px; flex-wrap: wrap;">
-                            <button class="btn btn-secondary-sm" onclick="copyOcrText()">📋 Salin Teks</button>
-                            <button class="btn btn-primary btn-small" onclick="downloadOcrTxt()">💾 Unduh TXT</button>
-                            <button class="btn-gdrive-save" id="saveGDriveBtn" onclick="saveOcrToGDrive()" style="padding: 6px 12px; font-size: 0.82rem;">
-                                <svg width="14" height="14" viewBox="0 0 87.3 78" style="vertical-spacing: middle;"><path d="m6.6 66.85 3.85 6.65c.8 1.4 1.95 2.5 3.3 3.3l13.75-23.8H0c0 1.55.4 3.1 1.2 4.5z" fill="#0066da"/><path d="M43.65 25 29.9 1.2c-1.35.8-2.5 1.9-3.3 3.3l-25.4 44A9.06 9.06 0 0 0 0 53h27.5z" fill="#00ac47"/><path d="M73.55 76.8c1.35-.8 2.5-1.9 3.3-3.3l1.6-2.75 7.65-13.25c.8-1.4 1.2-2.95 1.2-4.5H59.8l5.85 10.15z" fill="#ea4335"/><path d="M43.65 25 57.4 1.2C56.05.4 54.5 0 52.9 0H34.4c-1.6 0-3.15.45-4.5 1.2z" fill="#00832d"/><path d="M59.8 53H87.3c0-1.55-.4-3.1-1.2-4.5l-25.4-44c-.8-1.4-1.95-2.5-3.3-3.3L43.65 25z" fill="#2684fc"/><path d="M73.4 76.8H27.5L13.75 53h59.65c1.6 0 3.15.45 4.5 1.25.7.4 1.3.9 1.8 1.5z" fill="#ffba00"/></svg>
-                                <span>Simpan ke Drive</span>
-                            </button>
+                <!-- 2-Column Workspace Grid -->
+                <div class="ocr-workspace-grid" id="ocrMainGrid">
+                    <!-- Left Column: Document Pages Preview Grid -->
+                    <div class="ocr-pages-col">
+                        <div class="ocr-col-header">
+                            <div class="ocr-col-title-wrap">
+                                <span class="ocr-col-title">📑 Halaman Dokumen</span>
+                                <span id="pagesCountBadge" class="ocr-count-pill">0 Hal</span>
+                            </div>
+                            <span class="ocr-col-sub">Teks transparan akan disematkan di atas setiap halaman PDF ini</span>
+                        </div>
+                        <div id="ocrThumbnailsGrid" class="ocr-thumbnails-grid">
+                            <!-- Thumbnails rendered dynamically -->
                         </div>
                     </div>
-                    <textarea id="ocrOutput" class="ocr-textarea" placeholder="Teks hasil scan akan muncul di sini..."></textarea>
+
+                    <!-- Right Column: iLovePDF OCR Options Sidebar -->
+                    <div class="ocr-sidebar-col">
+                        <div class="ocr-sidebar-card">
+                            <div class="ocr-sidebar-header">
+                                <span class="ocr-sidebar-icon">⚙️</span>
+                                <span class="ocr-sidebar-title">Opsi OCR PDF</span>
+                            </div>
+
+                            <div class="ocr-info-box">
+                                <span class="ocr-info-icon">💡</span>
+                                <p class="ocr-info-text">Akurasi pengenalan teks meningkat jika memilih bahasa dokumen yang sesuai.</p>
+                            </div>
+
+                            <div class="ocr-form-group">
+                                <label for="ocrLang" class="ocr-label">🌐 Bahasa Dokumen:</label>
+                                <select id="ocrLang" class="ocr-select">
+                                    <option value="ind+eng" selected>🇮🇩 Bahasa Indonesia &amp; 🇬🇧 English</option>
+                                    <option value="ind">🇮🇩 Bahasa Indonesia</option>
+                                    <option value="eng">🇬🇧 English</option>
+                                    <option value="jpn">🇯🇵 日本語 (Japanese)</option>
+                                    <option value="chi_sim">🇨🇳 中文 - 简体 (Chinese Simplified)</option>
+                                    <option value="ara">🇸🇦 العربية (Arabic)</option>
+                                    <option value="spa">🇪🇸 Español (Spanish)</option>
+                                    <option value="deu">🇩🇪 Deutsch (German)</option>
+                                    <option value="fra">🇫🇷 Français (French)</option>
+                                    <option value="ita">🇮🇹 Italiano (Italian)</option>
+                                    <option value="rus">🇷🇺 Русский (Russian)</option>
+                                </select>
+                            </div>
+
+                            <div class="ocr-form-group">
+                                <label for="ocrPages" class="ocr-label">📄 Lingkup Halaman:</label>
+                                <select id="ocrPages" class="ocr-select" onchange="toggleCustomPageInput(this.value)">
+                                    <option value="all" selected>Semua Halaman</option>
+                                    <option value="first">Hanya Halaman 1</option>
+                                    <option value="custom">Rentang Halaman Kustom</option>
+                                </select>
+                                <div id="customPageInputWrap" class="ocr-custom-pages hidden" style="margin-top: 8px;">
+                                    <input type="text" id="customPageRange" class="ocr-input" placeholder="Contoh: 1-3, 5" />
+                                    <small style="font-size: 0.72rem; color: var(--text-muted);">Format: 1-3 atau 1, 3, 5</small>
+                                </div>
+                            </div>
+
+                            <div class="ocr-format-box">
+                                <div class="ocr-format-badge">✨ Output: Searchable PDF</div>
+                                <p class="ocr-format-desc">Menghasilkan file PDF asli yang disuntikkan lapisan teks tak terlihat (*Sandwich PDF*) sehingga teks dapat dicari dengan <strong>Ctrl+F</strong> dan diseleksi kursor.</p>
+                            </div>
+
+                            <!-- Big Red iLovePDF Process Button -->
+                            <div class="ocr-action-wrap">
+                                <button class="btn-red-ilovepdf" id="startOcrBtn" onclick="runOCR()">
+                                    <span>Terapkan OCR</span>
+                                    <span class="btn-process-arrow">➔</span>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Progress Section -->
+                <div id="progressSection" class="hidden ocr-progress-card">
+                    <div class="ocr-progress-top">
+                        <span id="progressTitle" class="ocr-progress-title">Memproses Dokumen...</span>
+                        <span id="progressPercent" class="ocr-progress-pct">0%</span>
+                    </div>
+                    <div class="progress-bar-track">
+                        <div class="progress-bar-fill" id="progressBar" style="width: 0%"></div>
+                    </div>
+                    <p id="progressText" class="ocr-progress-sub">Memuat model AI OCR...</p>
+                </div>
+
+                <!-- Success Result Section -->
+                <div id="ocrResultSection" class="hidden ocr-success-card">
+                    <div class="ocr-success-badge">✅ OCR Berhasil Diterapkan</div>
+                    <h3 class="ocr-success-title">Dokumen Searchable PDF Siap Diunduh!</h3>
+                    <p class="ocr-success-desc">Teks pada dokumen scan Anda kini telah diindeks ke dalam file PDF. Anda dapat mencari kata kunci (Ctrl+F) dan menyeleksi teks dengan leluasa di PDF Reader apapun.</p>
+
+                    <!-- Primary Download Action (Big Red) -->
+                    <div class="ocr-download-cta-row">
+                        <button class="btn-red-ilovepdf ocr-btn-download" id="downloadPdfBtn" onclick="downloadSearchablePdf()">
+                            <span style="font-size: 1.3rem;">📥</span>
+                            <span>Unduh Searchable PDF</span>
+                        </button>
+                        <button class="btn-gdrive-sidebar ocr-btn-gdrive" id="saveGDriveBtn" onclick="saveSearchablePdfToGDrive()">
+                            <svg width="16" height="16" viewBox="0 0 87.3 78"><path d="m6.6 66.85 3.85 6.65c.8 1.4 1.95 2.5 3.3 3.3l13.75-23.8H0c0 1.55.4 3.1 1.2 4.5z" fill="#0066da"/><path d="M43.65 25 29.9 1.2c-1.35.8-2.5 1.9-3.3 3.3l-25.4 44A9.06 9.06 0 0 0 0 53h27.5z" fill="#00ac47"/><path d="M73.55 76.8c1.35-.8 2.5-1.9 3.3-3.3l1.6-2.75 7.65-13.25c.8-1.4 1.2-2.95 1.2-4.5H59.8l5.85 10.15z" fill="#ea4335"/><path d="M43.65 25 57.4 1.2C56.05.4 54.5 0 52.9 0H34.4c-1.6 0-3.15.45-4.5 1.2z" fill="#00832d"/><path d="M59.8 53H87.3c0-1.55-.4-3.1-1.2-4.5l-25.4-44c-.8-1.4-1.95-2.5-3.3-3.3L43.65 25z" fill="#2684fc"/><path d="M73.4 76.8H27.5L13.75 53h59.65c1.6 0 3.15.45 4.5 1.25.7.4 1.3.9 1.8 1.5z" fill="#ffba00"/></svg>
+                            <span>Simpan ke Google Drive</span>
+                        </button>
+                    </div>
+
+                    <!-- Secondary Text Options Accordion -->
+                    <div class="ocr-text-accordion">
+                        <div class="ocr-text-header" onclick="toggleTextExtractionPreview()">
+                            <span class="ocr-accordion-title">📝 Salin Teks Mentah / Unduh Format TXT</span>
+                            <span id="accordionArrow">▼</span>
+                        </div>
+                        <div id="ocrTextBody" class="ocr-text-body hidden">
+                            <div class="ocr-text-actions">
+                                <button class="btn btn-secondary-sm" onclick="copyOcrText()">📋 Salin ke Clipboard</button>
+                                <button class="btn btn-primary btn-small" onclick="downloadOcrTxt()">💾 Unduh TXT</button>
+                            </div>
+                            <textarea id="ocrOutput" class="ocr-textarea" readonly placeholder="Teks hasil scan akan tampil di sini..."></textarea>
+                        </div>
+                    </div>
                 </div>
             </div>
 
-            <!-- Progress & Status -->
-            <div id="progressSection" class="hidden">
-                <div class="progress-bar-track">
-                    <div class="progress-bar-fill" id="progressBar" style="width: 0%"></div>
-                </div>
-                <p id="progressText" class="progress-text">Memproses...</p>
-            </div>
             <div id="statusBox" class="status-box hidden"></div>
 
             <div class="footer">
