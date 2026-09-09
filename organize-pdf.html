@@ -3,11 +3,13 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Susun &amp; Hapus Halaman PDF — Atur Urutan dan Rotasi PDF Online</title>
-    <link rel="stylesheet" href="style.css">
-    <script src="theme.js"></script>
+    <title>Susun &amp; Gabung PDF — Satukan, Atur Urutan, dan Putar PDF Online | Omni PDF</title>
+    <meta name="description" content="Satukan multi-file PDF, atur urutan lembar halaman dengan drag & drop, putar orientasi permanen, dan hapus halaman dalam 1 alat terpadu 100% privat di browser.">
+    <link rel="stylesheet" href="style.css?v=8">
+    <script src="theme.js?v=8"></script>
     <script src="https://unpkg.com/pdf-lib@1.17.1/dist/pdf-lib.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+    <link rel="manifest" href="manifest.json">
     <!-- Favicon -->
     <link rel="icon" type="image/svg+xml" href="favicon.svg">
     <link rel="icon" type="image/png" sizes="32x32" href="favicon-32x32.png">
@@ -16,20 +18,20 @@
     <!-- Open Graph / WhatsApp / Facebook Share -->
     <meta property="og:type" content="website">
     <meta property="og:site_name" content="Omni PDF">
-    <meta property="og:title" content="Omni PDF — All-in-One Online PDF Suite">
-    <meta property="og:description" content="Platform pengolah dokumen PDF terlengkap 100% in-browser & privat. Gabungkan, edit teks langsung, pisahkan, OCR searchable, kompres, dan tanda tangan PDF tanpa upload ke server.">
+    <meta property="og:title" content="Omni PDF — Susun &amp; Gabung PDF All-in-One">
+    <meta property="og:description" content="Satukan multi-file PDF, atur urutan lembar halaman, putar orientasi 90°/180°, dan hapus halaman yang tidak dibutuhkan langsung di browser tanpa upload server.">
     <meta property="og:image" content="https://pdf-merger-kappa-ashy.vercel.app/og-image.png">
     <meta property="og:image:width" content="1200">
     <meta property="og:image:height" content="675">
 
     <!-- Twitter Card -->
     <meta name="twitter:card" content="summary_large_image">
-    <meta name="twitter:title" content="Omni PDF — All-in-One Online PDF Suite">
-    <meta name="twitter:description" content="Platform pengolah dokumen PDF terlengkap 100% in-browser & privat. Gabungkan, edit teks langsung, pisahkan, OCR searchable, kompres, dan tanda tangan PDF.">
+    <meta name="twitter:title" content="Omni PDF — Susun &amp; Gabung PDF All-in-One">
+    <meta name="twitter:description" content="Satukan multi-file PDF, atur urutan lembar halaman, putar orientasi 90°/180°, dan hapus halaman yang tidak dibutuhkan.">
     <meta name="twitter:image" content="https://pdf-merger-kappa-ashy.vercel.app/og-image.png">
 </head>
 <body>
-        <!-- Universal Navbar -->
+    <!-- Universal Navbar -->
     <nav class="site-navbar">
         <div class="nav-container">
             <a href="index.html" class="nav-brand">
@@ -38,20 +40,18 @@
             </a>
             <div class="nav-tabs">
                 <a href="index.html" class="nav-tab">🏠 Beranda</a>
-                <a href="organize-pdf.html" class="nav-tab active">🗂️ Susun Halaman</a>
+                <a href="organize-pdf.html" class="nav-tab active">🗂️ Susun &amp; Gabung</a>
                 <div class="nav-dropdown">
                     <button class="nav-dropdown-btn" onclick="toggleToolsDropdown(event)">
-                        <span>🛠️ Semua Alat (17)</span>
+                        <span>🛠️ Semua Alat (15)</span>
                         <span style="font-size: 0.75rem;">▼</span>
                     </button>
                     <div class="nav-dropdown-menu">
                         <div class="mega-menu-grid">
                             <div>
                                 <div class="mega-category-title">🗂️ Organisir &amp; Susun</div>
-                                <a href="merge-pdf.html" class="mega-menu-item"><span class="mega-item-icon">📄</span><div class="mega-item-text"><span class="mega-item-title">Gabungkan PDF</span><span class="mega-item-desc">Satukan multi PDF</span></div></a>
+                                <a href="organize-pdf.html" class="mega-menu-item active"><span class="mega-item-icon">🗂️</span><div class="mega-item-text"><span class="mega-item-title">Susun &amp; Gabung PDF</span><span class="mega-item-desc">Satukan, urut &amp; putar hal</span></div></a>
                                 <a href="split-pdf.html" class="mega-menu-item"><span class="mega-item-icon">✂️</span><div class="mega-item-text"><span class="mega-item-title">Pisahkan PDF</span><span class="mega-item-desc">Ekstrak hal / ZIP</span></div></a>
-                                <a href="organize-pdf.html" class="mega-menu-item active"><span class="mega-item-icon">🗂️</span><div class="mega-item-text"><span class="mega-item-title">Susun Halaman</span><span class="mega-item-desc">Reorder &amp; hapus hal</span></div></a>
-                                <a href="rotate-pdf.html" class="mega-menu-item"><span class="mega-item-icon">🔄</span><div class="mega-item-text"><span class="mega-item-title">Putar PDF</span><span class="mega-item-desc">Rotasi 90°/180°</span></div></a>
                                 <a href="crop-pdf.html" class="mega-menu-item"><span class="mega-item-icon">📐</span><div class="mega-item-text"><span class="mega-item-title">Crop PDF</span><span class="mega-item-desc">Potong margin dokumen</span></div></a>
                             </div>
                             <div>
@@ -89,18 +89,18 @@
     </nav>
 
     <main class="main-wrapper">
-        <div class="container" style="max-width: 960px;">
-            <div class="header">
-                <h1>🗂️ Susun &amp; Hapus Halaman PDF</h1>
-                <p>Atur urutan lembar halaman, putar orientasi, dan hapus halaman yang tidak dibutuhkan.<br>Semua proses berlangsung <strong>100% di browser</strong> Anda.</p>
+        <div class="organize-workspace-container">
+            <div class="header" style="text-align: center; margin-bottom: 24px;">
+                <h1>🗂️ Susun &amp; Gabung PDF</h1>
+                <p>Satukan beberapa file PDF, atur urutan lembar halaman dengan drag &amp; drop, putar orientasi permanen, dan hapus halaman yang tidak dibutuhkan.<br>Semua pemrosesan berjalan <strong>100% di memori browser Anda</strong> tanpa batas.</p>
             </div>
 
             <!-- Upload Area -->
             <div id="uploadSection" class="upload-area">
                 <div class="upload-icon">🗂️</div>
-                <p class="upload-title">Drag &amp; Drop file PDF di sini</p>
-                <p class="upload-sub">atau gunakan opsi di bawah</p>
-                <input type="file" id="pdfInput" accept=".pdf" hidden>
+                <p class="upload-title">Drag &amp; Drop satu atau beberapa file PDF di sini</p>
+                <p class="upload-sub">Mendukung multi-file sekaligus (dokumen biasa maupun terproteksi sandi)</p>
+                <input type="file" id="pdfInput" accept=".pdf" multiple hidden>
                 <div class="upload-btn-group">
                     <button class="btn btn-primary" onclick="document.getElementById('pdfInput').click()">Pilih Dokumen PDF</button>
                     <button class="btn-gdrive" onclick="pickPDFFromGDrive()">
@@ -112,36 +112,73 @@
 
             <!-- Workspace Section -->
             <div id="workspaceSection" class="hidden">
-                <div class="file-section-header">
-                    <div>
-                        <h3 id="docTitle">📄 document.pdf</h3>
-                        <p id="docMeta" style="font-size: 0.8rem; color: var(--text-muted);">5 Halaman tersisa</p>
+                <!-- Source Files Bar -->
+                <div class="source-files-panel">
+                    <div class="source-files-header">
+                        <div class="source-files-title">
+                            <span>📚 Dokumen Sumber (<span id="sourceFilesCount">0</span> file)</span>
+                        </div>
+                        <div class="source-files-actions">
+                            <input type="file" id="addPdfInput" accept=".pdf" multiple hidden>
+                            <button class="btn btn-secondary-sm" onclick="document.getElementById('addPdfInput').click()">
+                                ➕ Tambah File PDF
+                            </button>
+                            <button class="btn btn-secondary-sm" onclick="pickPDFFromGDrive()">
+                                ☁️ Google Drive
+                            </button>
+                            <button class="btn btn-danger-outline btn-sm" onclick="clearAllFiles()">
+                                🗑️ Hapus Semua
+                            </button>
+                        </div>
                     </div>
-                    <button class="btn btn-danger-outline btn-sm" onclick="clearFile()">🔄 Ganti Dokumen</button>
+                    <div id="sourceFilesList" class="source-files-list"></div>
                 </div>
 
-                <div style="display: flex; gap: 8px; margin-top: 14px; flex-wrap: wrap;">
-                    <button class="btn btn-secondary-sm" onclick="rotateAllPages(90)">🔄 Putar Semua (90°)</button>
-                    <button class="btn btn-secondary-sm" onclick="resetAllChanges()">↺ Reset Susunan Asli</button>
+                <!-- Password Unlock Container (rendered dynamically if protected PDF loaded) -->
+                <div id="unlockContainer"></div>
+
+                <!-- Batch Action Toolbar -->
+                <div class="organize-batch-toolbar">
+                    <div class="batch-tools-left">
+                        <button class="btn-batch" onclick="rotateAllPages(90)" title="Putar semua halaman 90 derajat searah jarum jam">
+                            ↻ Putar Semua (90° Kanan)
+                        </button>
+                        <button class="btn-batch" onclick="rotateAllPages(-90)" title="Putar semua halaman 90 derajat berlawanan jarum jam">
+                            ↺ Putar Semua (90° Kiri)
+                        </button>
+                        <button class="btn-batch" onclick="reverseAllPages()" title="Balik urutan halaman dari belakang ke depan">
+                            🔢 Balik Urutan
+                        </button>
+                        <button class="btn-batch" onclick="resetAllChanges()" title="Kembalikan urutan dan rotasi ke awal">
+                            ↺ Reset Urutan Asli
+                        </button>
+                    </div>
+                    <div class="batch-tools-right">
+                        <span id="docMeta" style="font-size: 0.85rem; font-weight: 700; color: var(--text-muted);">
+                            0 Halaman aktif
+                        </span>
+                    </div>
                 </div>
 
-                <p class="drag-hint" style="margin-top: 10px;">💡 Drag &amp; drop kartu halaman untuk mengubah urutan lembar</p>
+                <p class="drag-hint" style="margin-top: 4px; margin-bottom: 12px; font-size: 0.82rem;">
+                    💡 <strong>Tips:</strong> Drag &amp; drop kartu halaman untuk mengubah urutan lembar antar-dokumen. Gunakan tombol <strong>🔄</strong> di tiap kartu untuk memutar atau <strong>🗑️</strong> untuk membuang lembar.
+                </p>
 
                 <!-- Visual Organizer Grid -->
                 <div id="organizeGrid" class="doc-page-grid"></div>
 
-                <!-- Output section -->
-                <div class="output-section" style="margin-top: 20px;">
-                    <label for="outputName">💾 Nama file output:</label>
+                <!-- Output Section -->
+                <div class="output-section" style="margin-top: 24px;">
+                    <label for="outputName">💾 Nama file gabungan / hasil:</label>
                     <div class="output-input-row">
-                        <input type="text" id="outputName" class="output-input" value="organized_document" placeholder="nama_file" />
+                        <input type="text" id="outputName" class="output-input" value="omni_combined_doc" placeholder="nama_file" />
                         <span class="output-ext">.pdf</span>
                     </div>
                 </div>
 
-                <div class="action-row-split">
-                    <button class="btn btn-success btn-large" id="savePdfBtn" onclick="saveOrganizedPDF()">
-                        💾 Simpan &amp; Download PDF
+                <div class="action-row-split" style="margin-top: 20px;">
+                    <button class="btn btn-large btn-red-action" id="savePdfBtn" onclick="saveOrganizedPDF()">
+                        📄 Simpan &amp; Unduh PDF ➔
                     </button>
                     <button class="btn-gdrive-save" id="saveGDriveBtn" onclick="saveOrganizedToGDrive()">
                         <svg viewBox="0 0 87.3 78" xmlns="http://www.w3.org/2000/svg"><path d="m6.6 66.85 3.85 6.65c.8 1.4 1.95 2.5 3.3 3.3l13.75-23.8h-27.5c0 1.55.4 3.1 1.2 4.5z" fill="#0066da"/><path d="m43.65 25-13.75-23.8c-1.35.8-2.5 1.9-3.3 3.3l-25.4 44c-.8 1.4-1.2 2.95-1.2 4.5h27.5z" fill="#00ac47"/><path d="m73.55 76.8c1.35-.8 2.5-1.9 3.3-3.3l1.6-2.75 7.65-13.25c.8-1.4 1.2-2.95 1.2-4.5h-27.502l5.852 11.5z" fill="#ea4335"/><path d="m43.65 25 13.75-23.8c-1.35-.8-2.9-1.2-4.5-1.2h-18.5c-1.6 0-3.15.45-4.5 1.2z" fill="#00832d"/><path d="m59.8 53h-32.3l-13.75 23.8c1.35.8 2.9 1.2 4.5 1.2h50.8c1.6 0 3.15-.45 4.5-1.2z" fill="#2684fc"/><path d="m73.4 26.5-12.7-22c-.8-1.4-1.95-2.5-3.3-3.3l-13.75 23.8 16.15 28h27.45c0-1.55-.4-3.1-1.2-4.5z" fill="#ffba00"/></svg>
@@ -151,7 +188,7 @@
             </div>
 
             <!-- Progress & Status -->
-            <div id="progressSection" class="hidden">
+            <div id="progressSection" class="hidden" style="margin-top: 24px;">
                 <div class="progress-bar-track">
                     <div class="progress-bar-fill" id="progressBar" style="width: 0%"></div>
                 </div>
@@ -160,13 +197,13 @@
             <div id="statusBox" class="status-box hidden"></div>
 
             <div class="footer">
-                <p>🔒 100% Aman · 🆓 Gratis · ⚡ Cepat · Tidak perlu login</p>
+                <p>🔒 100% In-Browser Privacy · ⚡ Cepat &amp; Tanpa Batas · 🆓 Gratis</p>
             </div>
         </div>
     </main>
 
     <script src="gdrive-config.js?v=2"></script>
     <script src="gdrive-picker.js?v=2"></script>
-    <script src="organize-pdf.js?v=2"></script>
+    <script src="organize-pdf.js?v=3"></script>
 </body>
 </html>

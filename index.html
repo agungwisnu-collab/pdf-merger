@@ -39,17 +39,15 @@
             <div class="nav-actions" style="margin-left: auto; display: flex; align-items: center; gap: 12px;">
                 <div class="nav-dropdown">
                     <button class="nav-dropdown-btn" onclick="toggleToolsDropdown(event)">
-                        <span>🛠️ Semua Alat (17)</span>
+                        <span>🛠️ Semua Alat (15)</span>
                         <span style="font-size: 0.75rem;">▼</span>
                     </button>
                     <div class="nav-dropdown-menu">
                         <div class="mega-menu-grid">
                             <div>
                                 <div class="mega-category-title">🗂️ Organisir &amp; Susun</div>
-                                <a href="merge-pdf.html" class="mega-menu-item"><span class="mega-item-icon">📄</span><div class="mega-item-text"><span class="mega-item-title">Gabungkan PDF</span><span class="mega-item-desc">Satukan multi PDF</span></div></a>
+                                <a href="organize-pdf.html" class="mega-menu-item"><span class="mega-item-icon">🗂️</span><div class="mega-item-text"><span class="mega-item-title">Susun &amp; Gabung PDF</span><span class="mega-item-desc">Satukan, urut &amp; putar hal</span></div></a>
                                 <a href="split-pdf.html" class="mega-menu-item"><span class="mega-item-icon">✂️</span><div class="mega-item-text"><span class="mega-item-title">Pisahkan PDF</span><span class="mega-item-desc">Ekstrak hal / ZIP</span></div></a>
-                                <a href="organize-pdf.html" class="mega-menu-item"><span class="mega-item-icon">🗂️</span><div class="mega-item-text"><span class="mega-item-title">Susun Halaman</span><span class="mega-item-desc">Reorder &amp; hapus hal</span></div></a>
-                                <a href="rotate-pdf.html" class="mega-menu-item"><span class="mega-item-icon">🔄</span><div class="mega-item-text"><span class="mega-item-title">Putar PDF</span><span class="mega-item-desc">Rotasi 90°/180°</span></div></a>
                                 <a href="crop-pdf.html" class="mega-menu-item"><span class="mega-item-icon">📐</span><div class="mega-item-text"><span class="mega-item-title">Crop PDF</span><span class="mega-item-desc">Potong margin dokumen</span></div></a>
                             </div>
                             <div>
@@ -90,7 +88,7 @@
         <section class="tools-hub-hero">
             <div class="hero-badge-pill">
                 <span>🚀</span>
-                <span>17 Alat PDF Lengkap · 100% In-Browser &amp; Privacy First</span>
+                <span>15 Alat PDF Lengkap · 100% In-Browser &amp; Privacy First</span>
             </div>
             <h1 class="tools-hub-title">Kelola Dokumen PDF Anda <br><span class="gradient-text">Cepat, Mudah, dan 100% Aman</span></h1>
             <p class="tools-hub-desc">Semua pemrosesan file berjalan langsung di memori perangkat Anda tanpa pernah diunggah ke server. Privasi terjamin, gratis, dan tanpa batasan kuota.</p>
@@ -98,7 +96,7 @@
             <!-- Search Bar with Shortcut Badge & Clear Button -->
             <div class="search-bar-wrap">
                 <span class="search-icon-left">🔍</span>
-                <input type="text" id="toolSearchInput" class="search-input-field" placeholder="Cari alat PDF... (misal: gabung, kompres, word, tanda tangan)" oninput="filterTools()" />
+                <input type="text" id="toolSearchInput" class="search-input-field" placeholder="Cari alat PDF... (misal: gabung, susun, putar, kompres, tanda tangan)" oninput="filterTools()" />
                 <button type="button" id="clearSearchBtn" class="search-clear-btn" onclick="clearToolSearch()" aria-label="Hapus pencarian">✕</button>
                 <span class="search-key-badge" id="searchKeyBadge">/</span>
             </div>
@@ -106,12 +104,12 @@
             <!-- Quick Action Tags -->
             <div class="quick-tags-wrap">
                 <span class="quick-tag-label">Paling Sering Digunakan:</span>
-                <button class="quick-tag-btn" onclick="setQuickSearch('gabung')">📄 Gabung PDF</button>
+                <button class="quick-tag-btn" onclick="setQuickSearch('susun')">🗂️ Susun &amp; Gabung</button>
                 <button class="quick-tag-btn" onclick="setQuickSearch('pisah')">✂️ Pisah Lembar</button>
                 <button class="quick-tag-btn" onclick="setQuickSearch('kompres')">🗜️ Kompres</button>
                 <button class="quick-tag-btn" onclick="setQuickSearch('tanda tangan')">✍️ Tanda Tangan</button>
                 <button class="quick-tag-btn" onclick="setQuickSearch('word')">📄 Word ke PDF</button>
-                <button class="quick-tag-btn" onclick="setQuickSearch('putar')">🔄 Putar PDF</button>
+                <button class="quick-tag-btn" onclick="setQuickSearch('ocr')">🔍 OCR AI</button>
             </div>
         </section>
 
@@ -149,8 +147,8 @@
 
         <!-- 3. Category Filter Tabs -->
         <div class="category-filter-nav">
-            <button class="category-pill active" onclick="setCategoryFilter('all', this)">🌟 Semua Alat (17)</button>
-            <button class="category-pill pill-organize" onclick="setCategoryFilter('organize', this)">🔵 Organisir (5)</button>
+            <button class="category-pill active" onclick="setCategoryFilter('all', this)">🌟 Semua Alat (15)</button>
+            <button class="category-pill pill-organize" onclick="setCategoryFilter('organize', this)">🔵 Organisir (3)</button>
             <button class="category-pill pill-convert" onclick="setCategoryFilter('convert', this)">🟢 Konversi (5)</button>
             <button class="category-pill pill-edit" onclick="setCategoryFilter('edit', this)">🟣 Edit &amp; TTD (4)</button>
             <button class="category-pill pill-security" onclick="setCategoryFilter('security', this)">🔴 Keamanan (3)</button>
@@ -163,20 +161,20 @@
                 <div class="cat-sec-header">
                     <div class="cat-sec-title-wrap">
                         <h2 class="cat-sec-title">🗂️ Organisir &amp; Susun Dokumen</h2>
-                        <span class="cat-sec-tag tag-organize">5 ALAT</span>
+                        <span class="cat-sec-tag tag-organize">3 ALAT</span>
                     </div>
-                    <span class="cat-sec-desc">Gabungkan, pisahkan, susun ulang, putar orientasi, dan potong margin lembar PDF.</span>
+                    <span class="cat-sec-desc">Satukan multi-dokumen, atur urutan lembar, putar orientasi permanen, dan pisahkan halaman PDF.</span>
                 </div>
 
                 <div class="tools-hub-grid">
-                    <!-- 1. Gabungkan PDF -->
-                    <a href="merge-pdf.html" class="hub-tool-card card-cat-organize" data-category="organize" data-keywords="merge gabung satukan kombinasi combine unite">
+                    <!-- 1. Susun & Gabung PDF (3-in-1 Unified) -->
+                    <a href="organize-pdf.html" class="hub-tool-card card-cat-organize" data-category="organize" data-keywords="organize susun urut reorder hapus delete duplicate putar rotate merge gabung satukan kombinasi combine unite orientasi">
                         <div class="hub-card-header">
-                            <div class="hub-card-icon icon-organize">📄</div>
-                            <span class="hub-card-badge badge-pro">POPULER</span>
+                            <div class="hub-card-icon icon-organize">🗂️</div>
+                            <span class="hub-card-badge badge-pro">ALL-IN-ONE</span>
                         </div>
-                        <div class="hub-card-title">Gabungkan PDF</div>
-                        <div class="hub-card-desc">Satukan multi-dokumen PDF menjadi satu file berurutan dengan seleksi halaman fleksibel.</div>
+                        <div class="hub-card-title">Susun &amp; Gabung PDF</div>
+                        <div class="hub-card-desc">Satukan multi-file, atur urutan lembar dengan drag &amp; drop, putar orientasi 90°/180°, dan hapus halaman dalam 1 alat terpadu.</div>
                         <div class="hub-card-footer">Buka Alat <span>→</span></div>
                     </a>
 
@@ -191,29 +189,7 @@
                         <div class="hub-card-footer">Buka Alat <span>→</span></div>
                     </a>
 
-                    <!-- 3. Susun Halaman -->
-                    <a href="organize-pdf.html" class="hub-tool-card card-cat-organize" data-category="organize" data-keywords="organize susun urut reorder hapus delete duplicate putar">
-                        <div class="hub-card-header">
-                            <div class="hub-card-icon icon-organize">🗂️</div>
-                            <span class="hub-card-badge badge-pro">VISUAL</span>
-                        </div>
-                        <div class="hub-card-title">Susun Halaman</div>
-                        <div class="hub-card-desc">Drag &amp; drop untuk mengatur ulang urutan lembar, menduplikat, atau menghapus halaman.</div>
-                        <div class="hub-card-footer">Buka Alat <span>→</span></div>
-                    </a>
-
-                    <!-- 4. Putar PDF -->
-                    <a href="rotate-pdf.html" class="hub-tool-card card-cat-organize" data-category="organize" data-keywords="rotate putar orientasi clockwise counterclockwise 90 180">
-                        <div class="hub-card-header">
-                            <div class="hub-card-icon icon-organize">🔄</div>
-                            <span class="hub-card-badge badge-new">BARU</span>
-                        </div>
-                        <div class="hub-card-title">Putar PDF</div>
-                        <div class="hub-card-desc">Putar orientasi lembar PDF 90°, 180°, atau 270° dan simpan secara permanen.</div>
-                        <div class="hub-card-footer">Buka Alat <span>→</span></div>
-                    </a>
-
-                    <!-- 5. Crop PDF -->
+                    <!-- 3. Crop PDF -->
                     <a href="crop-pdf.html" class="hub-tool-card card-cat-organize" data-category="organize" data-keywords="crop potong margin trim pangkas border">
                         <div class="hub-card-header">
                             <div class="hub-card-icon icon-organize">📐</div>

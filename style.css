@@ -4451,3 +4451,399 @@ body.workspace-active {
     }
 }
 
+/* ============================================================
+   Unified Page Organizer & Merger Styles (Omni PDF)
+   ============================================================ */
+
+.organize-workspace-container {
+    max-width: 1180px;
+    margin: 0 auto;
+    padding: 0 16px;
+}
+
+/* Source Files Bar */
+.source-files-panel {
+    background: var(--bg-card);
+    border: 1px solid var(--border-subtle);
+    border-radius: 14px;
+    padding: 14px 18px;
+    margin-bottom: 18px;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.03);
+}
+
+.source-files-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 10px;
+    flex-wrap: wrap;
+    gap: 10px;
+}
+
+.source-files-title {
+    font-size: 0.92rem;
+    font-weight: 700;
+    color: var(--text-main);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.source-files-actions {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.source-files-list {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+
+.source-file-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 12px;
+    background: var(--bg-subtle);
+    border: 1px solid var(--border-subtle);
+    border-radius: 10px;
+    font-size: 0.82rem;
+    font-weight: 600;
+    color: var(--text-main);
+    transition: all 0.2s ease;
+}
+
+.source-file-chip.encrypted {
+    background: rgba(245, 158, 11, 0.12);
+    border-color: rgba(245, 158, 11, 0.4);
+    color: #d97706;
+}
+
+.source-file-chip .chip-name {
+    max-width: 160px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.source-file-chip .chip-count {
+    background: var(--bg-card);
+    padding: 2px 6px;
+    border-radius: 6px;
+    font-size: 0.74rem;
+    color: var(--text-muted);
+}
+
+.source-file-chip .chip-remove {
+    cursor: pointer;
+    background: none;
+    border: none;
+    color: var(--text-muted);
+    font-size: 0.85rem;
+    padding: 0;
+    line-height: 1;
+    transition: color 0.15s ease;
+}
+
+.source-file-chip .chip-remove:hover {
+    color: #ef4444;
+}
+
+/* Inline Password Unlock Card */
+.unlock-alert-card {
+    background: linear-gradient(135deg, rgba(239, 68, 68, 0.08) 0%, rgba(245, 158, 11, 0.08) 100%);
+    border: 1.5px solid rgba(239, 68, 68, 0.25);
+    border-radius: 14px;
+    padding: 16px 20px;
+    margin-bottom: 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.unlock-alert-header {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-size: 0.95rem;
+    font-weight: 700;
+    color: #dc2626;
+}
+
+.unlock-alert-form {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-wrap: wrap;
+}
+
+.unlock-input-wrap {
+    position: relative;
+    flex: 1;
+    min-width: 220px;
+    max-width: 360px;
+}
+
+.unlock-input-field {
+    width: 100%;
+    padding: 9px 36px 9px 12px;
+    border: 1.5px solid var(--border-subtle);
+    border-radius: 8px;
+    background: var(--bg-card);
+    color: var(--text-main);
+    font-size: 0.88rem;
+    font-family: inherit;
+    outline: none;
+    transition: border-color 0.2s;
+}
+
+.unlock-input-field:focus {
+    border-color: #dc2626;
+}
+
+.unlock-eye-btn {
+    position: absolute;
+    right: 8px;
+    top: 50%;
+    transform: translateY(-50%);
+    background: none;
+    border: none;
+    cursor: pointer;
+    font-size: 0.9rem;
+    opacity: 0.65;
+    padding: 2px;
+}
+
+.unlock-eye-btn:hover {
+    opacity: 1;
+}
+
+.unlock-submit-btn {
+    padding: 9px 18px;
+    background: #dc2626;
+    color: #fff;
+    border: none;
+    border-radius: 8px;
+    font-size: 0.88rem;
+    font-weight: 700;
+    cursor: pointer;
+    transition: background 0.2s, transform 0.1s;
+}
+
+.unlock-submit-btn:hover {
+    background: #b91c1c;
+    transform: translateY(-1px);
+}
+
+/* Batch Action Toolbar */
+.organize-batch-toolbar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    background: var(--bg-card);
+    border: 1px solid var(--border-subtle);
+    border-radius: 12px;
+    padding: 10px 16px;
+    margin-bottom: 16px;
+    flex-wrap: wrap;
+    gap: 10px;
+}
+
+.batch-tools-left {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+
+.batch-tools-right {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.btn-batch {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 7px 12px;
+    border-radius: 8px;
+    border: 1px solid var(--border-subtle);
+    background: var(--bg-subtle);
+    color: var(--text-main);
+    font-size: 0.82rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.15s ease;
+    font-family: inherit;
+}
+
+.btn-batch:hover {
+    background: var(--primary-light);
+    color: var(--primary);
+    border-color: var(--primary);
+}
+
+.btn-batch.danger:hover {
+    background: rgba(239, 68, 68, 0.1);
+    color: #ef4444;
+    border-color: #ef4444;
+}
+
+/* Doc Page Grid */
+.doc-page-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(170px, 1fr));
+    gap: 18px;
+    margin: 18px 0;
+    min-height: 220px;
+}
+
+.doc-page-card {
+    background: var(--bg-card);
+    border: 1.5px solid var(--border-card);
+    border-radius: 12px;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    box-shadow: 0 3px 10px rgba(0, 0, 0, 0.04);
+    cursor: grab;
+    transition: transform 0.2s cubic-bezier(0.4, 0, 0.2, 1), box-shadow 0.2s ease, border-color 0.2s ease;
+    position: relative;
+    user-select: none;
+}
+
+.doc-page-card:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 8px 20px rgba(0, 0, 0, 0.08);
+    border-color: var(--primary);
+}
+
+.doc-page-card.dragging {
+    opacity: 0.35;
+    transform: scale(0.95);
+    border-style: dashed;
+    border-color: var(--primary);
+}
+
+.doc-page-card.drag-over {
+    border-color: #e5322d;
+    box-shadow: 0 0 0 3px rgba(229, 50, 45, 0.25);
+    transform: scale(1.03);
+}
+
+.doc-page-thumb-wrap {
+    background: #e5e7eb;
+    height: 220px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+    padding: 12px;
+    position: relative;
+}
+
+[data-theme="dark"] .doc-page-thumb-wrap {
+    background: #1e2433;
+}
+
+.doc-page-thumb {
+    max-width: 100%;
+    max-height: 100%;
+    object-fit: contain;
+    background: #fff;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+    border-radius: 3px;
+    transition: transform 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+    pointer-events: none;
+}
+
+.doc-page-file-badge {
+    position: absolute;
+    top: 8px;
+    left: 8px;
+    background: rgba(15, 23, 42, 0.75);
+    backdrop-filter: blur(4px);
+    color: #fff;
+    font-size: 0.68rem;
+    font-weight: 700;
+    padding: 3px 7px;
+    border-radius: 6px;
+    max-width: 120px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    z-index: 2;
+}
+
+.doc-page-footer {
+    padding: 8px 10px;
+    background: var(--bg-card);
+    border-top: 1px solid var(--border-subtle);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    font-size: 0.78rem;
+    font-weight: 700;
+    color: var(--text-muted);
+}
+
+.doc-page-actions {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.doc-mini-btn {
+    width: 26px;
+    height: 26px;
+    border-radius: 6px;
+    border: 1px solid var(--border-subtle);
+    background: var(--bg-subtle);
+    color: var(--text-main);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.75rem;
+    cursor: pointer;
+    transition: all 0.15s ease;
+    padding: 0;
+}
+
+.doc-mini-btn:hover {
+    background: var(--primary-light);
+    color: var(--primary);
+    border-color: var(--primary);
+}
+
+.doc-mini-btn.del-btn:hover {
+    background: rgba(239, 68, 68, 0.12);
+    color: #ef4444;
+    border-color: #ef4444;
+}
+
+/* Primary Red Button (iLovePDF signature) */
+.btn-red-action {
+    background: #e5322d !important;
+    color: #ffffff !important;
+    font-weight: 700 !important;
+    border: none !important;
+    box-shadow: 0 4px 14px rgba(229, 50, 45, 0.35) !important;
+    transition: all 0.2s ease !important;
+    cursor: pointer;
+}
+
+.btn-red-action:hover:not(:disabled) {
+    background: #c5221f !important;
+    transform: translateY(-1px);
+    box-shadow: 0 6px 20px rgba(229, 50, 45, 0.45) !important;
+}
+
+.btn-red-action:disabled {
+    opacity: 0.55;
+    cursor: not-allowed;
+}
+
+
