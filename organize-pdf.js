@@ -86,6 +86,22 @@ function pickPDFFromGDrive() {
     });
 }
 
+// ─── Buffer Helper (Prevents Detached ArrayBuffer in Web Workers) ──
+async function getSourceFileBytes(sf) {
+    if (sf.file && typeof sf.file.arrayBuffer === 'function') {
+        try {
+            const buf = await sf.file.arrayBuffer();
+            return new Uint8Array(buf);
+        } catch (e) {
+            console.warn('Could not re-read sf.file arrayBuffer:', e);
+        }
+    }
+    if (sf.arrayBuffer && sf.arrayBuffer.byteLength > 0) {
+        return new Uint8Array(sf.arrayBuffer.slice(0));
+    }
+    throw new Error(`Buffer file "${sf.name || 'dokumen'}" tidak dapat diakses.`);
+}
+
 // ─── Load Files (Multi-file & Protection Handling) ─────────────
 async function loadFiles(newFileList) {
     const pdfFiles = newFileList.filter(f => f.type === 'application/pdf' || f.name.toLowerCase().endsWith('.pdf'));
@@ -115,8 +131,9 @@ async function loadFiles(newFileList) {
         };
 
         try {
-            // Attempt to read with pdf.js to check password & page count
-            const pdfDocJs = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
+            // Always pass a fresh slice to pdf.js so worker transfer doesn't detach sfItem.arrayBuffer
+            const copyForWorker = arrayBuffer.slice(0);
+            const pdfDocJs = await pdfjsLib.getDocument({ data: copyForWorker }).promise;
             sfItem.totalPages = pdfDocJs.numPages;
             sourceFiles.push(sfItem);
 
@@ -255,8 +272,9 @@ async function unlockSourceFile(fileId) {
     showProgress(25, `Membuka proteksi ${sf.name}...`);
 
     try {
+        const fileBytes = await getSourceFileBytes(sf);
         const pdfDocJs = await pdfjsLib.getDocument({
-            data: sf.arrayBuffer,
+            data: fileBytes.slice(0),
             password: password
         }).promise;
 
@@ -488,7 +506,8 @@ async function buildOrganizedPdfBlob(onProgressCallback) {
         }
 
         const options = sf.password ? { password: sf.password } : undefined;
-        const doc = await PDFDocument.load(sf.arrayBuffer, options);
+        const rawBytes = await getSourceFileBytes(sf);
+        const doc = await PDFDocument.load(rawBytes, options);
         loadedDocs.set(sf.id, doc);
     }
 
