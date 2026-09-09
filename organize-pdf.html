@@ -88,18 +88,19 @@
         </div>
     </nav>
 
+    <!-- Main Wrapper -->
     <main class="main-wrapper">
-        <div class="organize-workspace-container">
-            <div class="header" style="text-align: center; margin-bottom: 24px;">
+        <div class="container" style="max-width: 1040px;">
+            <div class="header">
                 <h1>🗂️ Susun &amp; Gabung PDF</h1>
-                <p>Satukan beberapa file PDF, atur urutan lembar halaman dengan drag &amp; drop, putar orientasi permanen, dan hapus halaman yang tidak dibutuhkan.<br>Semua pemrosesan berjalan <strong>100% di memori browser Anda</strong> tanpa batas.</p>
+                <p>Satukan beberapa file PDF, atur urutan lembar halaman dengan drag &amp; drop, putar orientasi permanen, dan hapus halaman yang tidak dibutuhkan.<br>Semua pemrosesan berjalan <strong>100% di browser</strong> Anda.</p>
             </div>
 
             <!-- Upload Area -->
             <div id="uploadSection" class="upload-area">
                 <div class="upload-icon">🗂️</div>
                 <p class="upload-title">Drag &amp; Drop satu atau beberapa file PDF di sini</p>
-                <p class="upload-sub">Mendukung multi-file sekaligus (dokumen biasa maupun terproteksi sandi)</p>
+                <p class="upload-sub">atau gunakan opsi di bawah</p>
                 <input type="file" id="pdfInput" accept=".pdf" multiple hidden>
                 <div class="upload-btn-group">
                     <button class="btn btn-primary" onclick="document.getElementById('pdfInput').click()">Pilih Dokumen PDF</button>
@@ -112,27 +113,28 @@
 
             <!-- Workspace Section -->
             <div id="workspaceSection" class="hidden">
-                <!-- Source Files Bar -->
-                <div class="source-files-panel">
-                    <div class="source-files-header">
-                        <div class="source-files-title">
-                            <span>📚 Dokumen Sumber (<span id="sourceFilesCount">0</span> file)</span>
-                        </div>
-                        <div class="source-files-actions">
-                            <input type="file" id="addPdfInput" accept=".pdf" multiple hidden>
-                            <button class="btn btn-secondary-sm" onclick="document.getElementById('addPdfInput').click()">
-                                ➕ Tambah File PDF
-                            </button>
-                            <button class="btn btn-secondary-sm" onclick="pickPDFFromGDrive()">
-                                ☁️ Google Drive
-                            </button>
-                            <button class="btn btn-danger-outline btn-sm" onclick="clearAllFiles()">
-                                🗑️ Hapus Semua
-                            </button>
-                        </div>
+                <!-- Source Files Header (Consistent with other tools) -->
+                <div class="file-section-header">
+                    <div>
+                        <h3 id="docTitle">📚 Dokumen Sumber (<span id="sourceFilesCount">0</span> file)</h3>
+                        <p id="docMeta" style="font-size: 0.8rem; color: var(--text-muted); margin-top: 2px;">0 Halaman aktif</p>
                     </div>
-                    <div id="sourceFilesList" class="source-files-list"></div>
+                    <div style="display: flex; gap: 8px; align-items: center; flex-wrap: wrap;">
+                        <input type="file" id="addPdfInput" accept=".pdf" multiple hidden>
+                        <button class="btn btn-secondary-sm" onclick="document.getElementById('addPdfInput').click()">
+                            ➕ Tambah File PDF
+                        </button>
+                        <button class="btn btn-secondary-sm" onclick="pickPDFFromGDrive()">
+                            ☁️ Google Drive
+                        </button>
+                        <button class="btn btn-danger-outline btn-sm" onclick="clearAllFiles()">
+                            🔄 Ganti Dokumen
+                        </button>
+                    </div>
                 </div>
+
+                <!-- Source Files Chips List -->
+                <div id="sourceFilesList" class="source-files-list" style="margin-bottom: 16px;"></div>
 
                 <!-- Password Unlock Container (rendered dynamically if protected PDF loaded) -->
                 <div id="unlockContainer"></div>
@@ -149,27 +151,23 @@
                         <button class="btn-batch" onclick="reverseAllPages()" title="Balik urutan halaman dari belakang ke depan">
                             🔢 Balik Urutan
                         </button>
-                        <button class="btn-batch" onclick="resetAllChanges()" title="Kembalikan urutan dan rotasi ke awal">
-                            ↺ Reset Urutan Asli
+                        <button class="btn-batch" onclick="resetAllChanges()" title="Kembalikan susunan dan rotasi ke awal">
+                            ↺ Reset Susunan Asli
                         </button>
                     </div>
                     <div class="batch-tools-right">
-                        <span id="docMeta" style="font-size: 0.85rem; font-weight: 700; color: var(--text-muted);">
-                            0 Halaman aktif
+                        <span style="font-size: 0.8rem; color: var(--text-muted);">
+                            💡 Drag &amp; drop untuk mengatur urutan
                         </span>
                     </div>
                 </div>
-
-                <p class="drag-hint" style="margin-top: 4px; margin-bottom: 12px; font-size: 0.82rem;">
-                    💡 <strong>Tips:</strong> Drag &amp; drop kartu halaman untuk mengubah urutan lembar antar-dokumen. Gunakan tombol <strong>🔄</strong> di tiap kartu untuk memutar atau <strong>🗑️</strong> untuk membuang lembar.
-                </p>
 
                 <!-- Visual Organizer Grid -->
                 <div id="organizeGrid" class="doc-page-grid"></div>
 
                 <!-- Output Section -->
                 <div class="output-section" style="margin-top: 24px;">
-                    <label for="outputName">💾 Nama file gabungan / hasil:</label>
+                    <label for="outputName">💾 Nama file output:</label>
                     <div class="output-input-row">
                         <input type="text" id="outputName" class="output-input" value="omni_combined_doc" placeholder="nama_file" />
                         <span class="output-ext">.pdf</span>
@@ -177,8 +175,8 @@
                 </div>
 
                 <div class="action-row-split" style="margin-top: 20px;">
-                    <button class="btn btn-large btn-red-action" id="savePdfBtn" onclick="saveOrganizedPDF()">
-                        📄 Simpan &amp; Unduh PDF ➔
+                    <button class="btn btn-primary btn-large" id="savePdfBtn" onclick="saveOrganizedPDF()">
+                        💾 Simpan &amp; Unduh PDF
                     </button>
                     <button class="btn-gdrive-save" id="saveGDriveBtn" onclick="saveOrganizedToGDrive()">
                         <svg viewBox="0 0 87.3 78" xmlns="http://www.w3.org/2000/svg"><path d="m6.6 66.85 3.85 6.65c.8 1.4 1.95 2.5 3.3 3.3l13.75-23.8h-27.5c0 1.55.4 3.1 1.2 4.5z" fill="#0066da"/><path d="m43.65 25-13.75-23.8c-1.35.8-2.5 1.9-3.3 3.3l-25.4 44c-.8 1.4-1.2 2.95-1.2 4.5h27.5z" fill="#00ac47"/><path d="m73.55 76.8c1.35-.8 2.5-1.9 3.3-3.3l1.6-2.75 7.65-13.25c.8-1.4 1.2-2.95 1.2-4.5h-27.502l5.852 11.5z" fill="#ea4335"/><path d="m43.65 25 13.75-23.8c-1.35-.8-2.9-1.2-4.5-1.2h-18.5c-1.6 0-3.15.45-4.5 1.2z" fill="#00832d"/><path d="m59.8 53h-32.3l-13.75 23.8c1.35.8 2.9 1.2 4.5 1.2h50.8c1.6 0 3.15-.45 4.5-1.2z" fill="#2684fc"/><path d="m73.4 26.5-12.7-22c-.8-1.4-1.95-2.5-3.3-3.3l-13.75 23.8 16.15 28h27.45c0-1.55-.4-3.1-1.2-4.5z" fill="#ffba00"/></svg>
@@ -197,13 +195,13 @@
             <div id="statusBox" class="status-box hidden"></div>
 
             <div class="footer">
-                <p>🔒 100% In-Browser Privacy · ⚡ Cepat &amp; Tanpa Batas · 🆓 Gratis</p>
+                <p>🔒 100% Aman · 🆓 Gratis · ⚡ Cepat · Tidak perlu login</p>
             </div>
         </div>
     </main>
 
     <script src="gdrive-config.js?v=2"></script>
     <script src="gdrive-picker.js?v=2"></script>
-    <script src="organize-pdf.js?v=3"></script>
+    <script src="organize-pdf.js?v=4"></script>
 </body>
 </html>
