@@ -181,4 +181,150 @@
             emptyState.remove();
         }
     };
+
+    // ============================================================
+    // 8. Modern Global Toast & Notification System (Omni PDF)
+    // ============================================================
+    function getToastContainer() {
+        let container = document.getElementById('omniToastContainer');
+        if (!container) {
+            container = document.createElement('div');
+            container.id = 'omniToastContainer';
+            container.className = 'omni-toast-container';
+            document.body.appendChild(container);
+        }
+        return container;
+    }
+
+    window.showToast = function (message, type = 'info', duration = 3800) {
+        if (!message) return;
+        const msgStr = String(message);
+
+        // Infer type if not explicitly set
+        if (type === 'info') {
+            if (msgStr.includes('✅') || msgStr.toLowerCase().includes('berhasil')) {
+                type = 'success';
+            } else if (msgStr.includes('❌') || msgStr.toLowerCase().includes('gagal') || msgStr.toLowerCase().includes('error')) {
+                type = 'error';
+            } else if (msgStr.includes('⚠️') || msgStr.toLowerCase().includes('peringatan')) {
+                type = 'warning';
+            }
+        }
+
+        // Clean redundant leading emojis if already matched
+        let cleanMsg = msgStr.replace(/^[✅❌⚠️ℹ️💡]\s*/, '');
+
+        const iconMap = {
+            success: '✅',
+            error: '❌',
+            warning: '⚠️',
+            info: 'ℹ️'
+        };
+
+        const container = getToastContainer();
+        const toast = document.createElement('div');
+        toast.className = `omni-toast-card toast-${type}`;
+
+        toast.innerHTML = `
+            <div class="toast-icon">${iconMap[type] || 'ℹ️'}</div>
+            <div class="toast-message">${cleanMsg}</div>
+            <button class="toast-close-btn" aria-label="Tutup">✕</button>
+        `;
+
+        const closeBtn = toast.querySelector('.toast-close-btn');
+        let dismissTimer = null;
+
+        function dismissToast() {
+            if (dismissTimer) clearTimeout(dismissTimer);
+            toast.classList.add('dismissing');
+            setTimeout(() => {
+                if (toast.parentNode) toast.parentNode.removeChild(toast);
+            }, 260);
+        }
+
+        closeBtn.onclick = dismissToast;
+
+        if (duration > 0) {
+            dismissTimer = setTimeout(dismissToast, duration);
+            toast.addEventListener('mouseenter', () => {
+                if (dismissTimer) clearTimeout(dismissTimer);
+            });
+            toast.addEventListener('mouseleave', () => {
+                dismissTimer = setTimeout(dismissToast, 1800);
+            });
+        }
+
+        container.appendChild(toast);
+        return toast;
+    };
+
+    // Intercept native browser alert to use modern Toast
+    const nativeAlert = window.alert;
+    window.alert = function (msg) {
+        window.showToast(msg);
+    };
+
+    // ============================================================
+    // 9. Modern Global Confirm Modal (Glassmorphism Dialog)
+    // ============================================================
+    window.showConfirmModal = function (options) {
+        return new Promise((resolve) => {
+            const opts = typeof options === 'string' ? { message: options } : (options || {});
+            const title = opts.title || 'Konfirmasi Tindakan';
+            const message = opts.message || 'Apakah Anda yakin ingin melanjutkan?';
+            const confirmText = opts.confirmText || 'Lanjutkan';
+            const cancelText = opts.cancelText || 'Batal';
+            const isDanger = opts.danger !== false;
+
+            let backdrop = document.getElementById('omniModalBackdrop');
+            if (backdrop) backdrop.remove();
+
+            backdrop = document.createElement('div');
+            backdrop.id = 'omniModalBackdrop';
+            backdrop.className = 'omni-modal-backdrop';
+
+            backdrop.innerHTML = `
+                <div class="omni-modal-card">
+                    <div class="omni-modal-header">
+                        <span class="omni-modal-icon">${isDanger ? '⚠️' : '❓'}</span>
+                        <h3 class="omni-modal-title">${title}</h3>
+                    </div>
+                    <div class="omni-modal-body">
+                        <p>${message}</p>
+                    </div>
+                    <div class="omni-modal-actions">
+                        <button type="button" class="btn btn-secondary-sm modal-btn-cancel">${cancelText}</button>
+                        <button type="button" class="btn ${isDanger ? 'btn-danger-outline' : 'btn-primary'} modal-btn-confirm">${confirmText}</button>
+                    </div>
+                </div>
+            `;
+
+            function closeModal(result) {
+                backdrop.classList.add('closing');
+                setTimeout(() => {
+                    if (backdrop.parentNode) backdrop.parentNode.removeChild(backdrop);
+                    resolve(result);
+                    if (result && typeof opts.onConfirm === 'function') opts.onConfirm();
+                    if (!result && typeof opts.onCancel === 'function') opts.onCancel();
+                }, 200);
+            }
+
+            backdrop.querySelector('.modal-btn-cancel').onclick = () => closeModal(false);
+            backdrop.querySelector('.modal-btn-confirm').onclick = () => closeModal(true);
+
+            backdrop.addEventListener('click', (e) => {
+                if (e.target === backdrop) closeModal(false);
+            });
+
+            document.addEventListener('keydown', function escHandler(e) {
+                if (e.key === 'Escape') {
+                    document.removeEventListener('keydown', escHandler);
+                    closeModal(false);
+                }
+            });
+
+            document.body.appendChild(backdrop);
+        });
+    };
 })();
+

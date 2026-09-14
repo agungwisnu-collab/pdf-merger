@@ -22,6 +22,27 @@ let selectedElementId = null;
 let pageDpr           = 1; // High-DPI screen pixel ratio for crisp rendering
 let basePageWidth     = 0;
 let basePageHeight    = 0;
+let pendingPlacement  = null; // { type: 'image' | 'shape', ... }
+
+// Canvas context helper for exact pixel text measurements
+let textMeasureCanvas = null;
+function measureExactTextWidth(text, fontSize, fontFamily, isBold, isItalic) {
+    if (!textMeasureCanvas) {
+        textMeasureCanvas = document.createElement('canvas');
+    }
+    const ctx = textMeasureCanvas.getContext('2d');
+    const weight = isBold ? 'bold ' : 'normal ';
+    const style = isItalic ? 'italic ' : 'normal ';
+    ctx.font = `${style}${weight}${fontSize || 16}px ${fontFamily || 'Plus Jakarta Sans, sans-serif'}`;
+
+    const lines = String(text ?? '').split('\n');
+    let maxW = 0;
+    for (const line of lines) {
+        const metrics = ctx.measureText(line || '');
+        if (metrics.width > maxW) maxW = metrics.width;
+    }
+    return maxW;
+}
 
 // Page Edits Store: { [pageNum]: { elements: [], deletedElements: [], drawingDataUrl: '' } }
 let pageEdits = {};
@@ -88,6 +109,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const editorViewport = document.getElementById('editorViewport');
     if (editorViewport) {
         editorViewport.addEventListener('mousedown', (e) => {
+            if (pendingPlacement) return; // Jangan deselect bila sedang mode penempatan
             if (!e.target.closest('.anno-element') && !e.target.closest('.pdf-text-item') && !e.target.closest('.editor-toolbar-box') && !e.target.closest('.editor-sidebar-pages') && !e.target.closest('.preview-floating-nav')) {
                 deselectAllElements();
             }
@@ -107,6 +129,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     initDrawingCanvasEvents();
+    initPlacementEvents();
     initKeyboardShortcuts();
 });
 
@@ -165,6 +188,13 @@ function initKeyboardShortcuts() {
                 deleteSelectedElement();
             }
         } else if (e.key === 'Escape') {
+            if (pendingPlacement) {
+                cancelPlacementMode();
+                if (typeof showToast === 'function') {
+                    showToast('Penempatan dibatalkan.', 'info', 1800);
+                }
+                return;
+            }
             if (document.activeElement && document.activeElement.isContentEditable) {
                 document.activeElement.blur();
             } else {
@@ -1078,10 +1108,12 @@ function addTextAnnotation(withBg = false) {
     if (!pageEdits[currentPage]) pageEdits[currentPage] = { elements: [] };
     
     const fontSize = textSettings.fontSize || 16;
+    const initialText = 'Ketik teks di sini...';
+    const initialWidth = Math.max(36, Math.ceil(measureExactTextWidth(initialText, fontSize, textSettings.fontFamily, textSettings.isBold, textSettings.isItalic)) + 16);
     const textItem = {
         id: 'text_' + Date.now(),
         type: 'text',
-        content: 'Ketik teks di sini...',
+        content: initialText,
         x: 60,
         y: 80,
         fontFamily: textSettings.fontFamily,
@@ -1092,7 +1124,7 @@ function addTextAnnotation(withBg = false) {
         isUnderline: textSettings.isUnderline,
         align: textSettings.align || 'left',
         hasBg: withBg || textSettings.hasBg,
-        width: 150,
+        width: initialWidth,
         height: Math.round(fontSize * 1.25 + 4)
     };
 
@@ -1117,11 +1149,12 @@ function updateSelectedTextProp(prop, val) {
         const el = document.getElementById(item.id);
         const textDiv = el?.querySelector('.editable-text-content');
         if (textDiv && el) {
-            const neededW = Math.max(20, textDiv.scrollWidth + 16);
-            if (neededW > item.width || prop === 'fontSize' || prop === 'fontFamily') {
-                item.width = Math.max(neededW, item.width || 20);
-                el.style.width = item.width + 'px';
-            }
+            const fontSize = item.fontSize || textSettings.fontSize || 16;
+            const fontFamily = item.fontFamily || textSettings.fontFamily;
+            const exactW = measureExactTextWidth(item.content || ' ', fontSize, fontFamily, item.isBold, item.isItalic);
+            const fitW = Math.max(36, Math.ceil(exactW) + 16);
+            item.width = fitW;
+            el.style.width = fitW + 'px';
             item.height = el.offsetHeight;
         }
         updateActionCardPosition(el, item);
@@ -1286,37 +1319,133 @@ function applyTextStyleToDOM(item) {
     item.height = el.offsetHeight;
 }
 
+// ─── Click-to-Place Placement Mode Helpers ───────────────────────
+function startPlacementMode(type, placementData) {
+    pendingPlacement = placementData;
+    deselectAllElements();
+
+    const viewport = document.getElementById('editorViewport');
+    const stage = document.getElementById('canvasStage');
+    if (viewport) viewport.classList.add('placing-mode');
+    if (stage) stage.classList.add('placing-mode');
+
+    const label = type === 'image' ? 'Gambar' : 'Bentuk';
+    let banner = document.getElementById('placementFloatingBanner');
+    if (!banner) {
+        banner = document.createElement('div');
+        banner.id = 'placementFloatingBanner';
+        banner.className = 'placement-floating-banner';
+        document.getElementById('editorViewport')?.appendChild(banner);
+    }
+    banner.innerHTML = `
+        <span class="placement-banner-icon">🎯</span>
+        <span>Klik pada dokumen untuk meletakkan <b>${label}</b></span>
+        <button type="button" class="placement-cancel-btn" onclick="cancelPlacementMode()">✕ Batal (ESC)</button>
+    `;
+
+    if (typeof window.showToast === 'function') {
+        window.showToast(`🎯 Arahkan kursor & klik di area dokumen untuk meletakkan ${label.toLowerCase()}.`, 'info', 3500);
+    }
+}
+
+function cancelPlacementMode() {
+    pendingPlacement = null;
+    document.getElementById('editorViewport')?.classList.remove('placing-mode');
+    document.getElementById('canvasStage')?.classList.remove('placing-mode');
+    const banner = document.getElementById('placementFloatingBanner');
+    if (banner) banner.remove();
+}
+
+function executePlacement(clickX, clickY) {
+    if (!pendingPlacement) return;
+    if (!pageEdits[currentPage]) pageEdits[currentPage] = { elements: [] };
+
+    saveStateForUndo();
+
+    const item = Object.assign({}, pendingPlacement);
+    const itemW = item.width || 120;
+    const itemH = item.height || 80;
+
+    // Posisikan elemen tepat berpusat di titik klik mouse
+    let posX = Math.round(clickX - (itemW / 2));
+    let posY = Math.round(clickY - (itemH / 2));
+
+    // Jaga agar tidak keluar batas kanvas dokumen
+    if (basePageWidth > 0) {
+        posX = Math.max(0, Math.min(basePageWidth - itemW, posX));
+    } else {
+        posX = Math.max(0, posX);
+    }
+    if (basePageHeight > 0) {
+        posY = Math.max(0, Math.min(basePageHeight - itemH, posY));
+    } else {
+        posY = Math.max(0, posY);
+    }
+
+    item.x = posX;
+    item.y = posY;
+    item.id = (item.type === 'image' ? 'img_' : 'shape_') + Date.now();
+
+    pageEdits[currentPage].elements.push(item);
+    renderOverlayElement(item);
+    selectElement(item.id);
+
+    const placedType = item.type === 'image' ? 'Gambar' : 'Bentuk';
+    cancelPlacementMode();
+    if (typeof window.showToast === 'function') {
+        window.showToast(`✅ ${placedType} berhasil ditempatkan!`, 'success', 2200);
+    }
+}
+
+function initPlacementEvents() {
+    const canvasStage = document.getElementById('canvasStage');
+    if (!canvasStage) return;
+
+    canvasStage.addEventListener('click', (e) => {
+        if (!pendingPlacement) return;
+        if (e.target.closest('#placementFloatingBanner') || e.target.closest('.preview-floating-nav') || e.target.closest('.anno-action-card')) {
+            return;
+        }
+        e.stopPropagation();
+        e.preventDefault();
+
+        const rect = canvasStage.getBoundingClientRect();
+        const clickX = (e.clientX - rect.left) / currentZoom;
+        const clickY = (e.clientY - rect.top) / currentZoom;
+
+        executePlacement(clickX, clickY);
+    });
+}
+
 // ─── Image / Photo Annotation Engine ────────────────────────────
 function handleImageInsert(file) {
     if (!file) return;
-    saveStateForUndo();
+    if (!pdfDocJs) {
+        if (typeof window.showToast === 'function') {
+            window.showToast('Silakan buka dokumen PDF terlebih dahulu sebelum menyisipkan gambar.', 'warning');
+        }
+        return;
+    }
 
     const reader = new FileReader();
     reader.onload = (e) => {
-        if (!pageEdits[currentPage]) pageEdits[currentPage] = { elements: [] };
-        
         const img = new Image();
         img.onload = () => {
             const maxW = 200;
-            const aspect = img.width / img.height;
+            const aspect = (img.width || 1) / (img.height || 1);
             const width = maxW;
             const height = Math.round(maxW / aspect);
 
-            const imgItem = {
-                id: 'img_' + Date.now(),
+            const placementData = {
                 type: 'image',
                 dataUrl: e.target.result,
-                x: 80,
-                y: 80,
                 width: width,
                 height: height,
                 opacity: 1.0,
                 rotation: 0
             };
 
-            pageEdits[currentPage].elements.push(imgItem);
-            renderOverlayElement(imgItem);
-            selectElement(imgItem.id);
+            startPlacementMode('image', placementData);
         };
         img.src = e.target.result;
     };
@@ -1350,33 +1479,47 @@ function rotateSelectedImage(deg) {
 // ─── Shape Annotation Engine ────────────────────────────────────
 function setShapeType(type) {
     shapeSettings.type = type;
+    if (pendingPlacement && pendingPlacement.type === 'shape') {
+        pendingPlacement.shapeType = type;
+        if (type === 'circle') { pendingPlacement.width = 120; pendingPlacement.height = 120; }
+        else if (type === 'line' || type === 'arrow') { pendingPlacement.width = 180; pendingPlacement.height = 40; }
+        else if (type === 'check' || type === 'cross') { pendingPlacement.width = 70; pendingPlacement.height = 70; }
+        else { pendingPlacement.width = 160; pendingPlacement.height = 100; }
+    }
 }
 
 function setShapeStrokeColor(color) {
     shapeSettings.strokeColor = color;
     document.getElementById('shapeStrokePicker').value = color;
     updateColorDotActive('#propsShape', color);
+    if (pendingPlacement && pendingPlacement.type === 'shape') {
+        pendingPlacement.strokeColor = color;
+    }
 }
 
 function setShapeFill(fill) {
     shapeSettings.fillType = fill;
+    if (pendingPlacement && pendingPlacement.type === 'shape') {
+        pendingPlacement.fillType = fill;
+    }
 }
 
 function addShapeToPage() {
-    saveStateForUndo();
-    if (!pageEdits[currentPage]) pageEdits[currentPage] = { elements: [] };
+    if (!pdfDocJs) {
+        if (typeof window.showToast === 'function') {
+            window.showToast('Silakan buka dokumen PDF terlebih dahulu.', 'warning');
+        }
+        return;
+    }
 
     let w = 160, h = 100;
     if (shapeSettings.type === 'circle') { w = 120; h = 120; }
     else if (shapeSettings.type === 'line' || shapeSettings.type === 'arrow') { w = 180; h = 40; }
     else if (shapeSettings.type === 'check' || shapeSettings.type === 'cross') { w = 70; h = 70; }
 
-    const shapeItem = {
-        id: 'shape_' + Date.now(),
+    const placementData = {
         type: 'shape',
         shapeType: shapeSettings.type,
-        x: 80,
-        y: 80,
         width: w,
         height: h,
         strokeColor: shapeSettings.strokeColor,
@@ -1384,9 +1527,7 @@ function addShapeToPage() {
         strokeWidth: shapeSettings.strokeWidth
     };
 
-    pageEdits[currentPage].elements.push(shapeItem);
-    renderOverlayElement(shapeItem);
-    selectElement(shapeItem.id);
+    startPlacementMode('shape', placementData);
 }
 
 function renderShapeSVG(item) {
@@ -1462,17 +1603,19 @@ function renderOverlayElement(item) {
 
         textDiv.addEventListener('input', () => {
             item.content = textDiv.innerText;
-            if (item.content.includes('\n')) {
-                textDiv.classList.add('is-multiline');
-            }
-            if (textDiv.scrollWidth > el.offsetWidth - 6) {
-                const newW = textDiv.scrollWidth + 16;
-                el.style.width = newW + 'px';
-                item.width = newW;
-            } else {
-                item.width  = el.offsetWidth;
-            }
+            const isMulti = item.content.includes('\n');
+            textDiv.classList.toggle('is-multiline', isMulti);
+
+            const fontSize = item.fontSize || textSettings.fontSize || 16;
+            const fontFamily = item.fontFamily || textSettings.fontFamily;
+            const exactW = measureExactTextWidth(item.content, fontSize, fontFamily, item.isBold, item.isItalic);
+
+            // Kotak menyesuaikan lebar teks secara elastis: membesar saat mengetik, MENYUSUT saat menghapus/backspace
+            const fitWidth = Math.max(36, Math.ceil(exactW) + 16);
+            el.style.width = fitWidth + 'px';
+            item.width = fitWidth;
             item.height = el.offsetHeight;
+            updateActionCardPosition(el, item);
         });
 
         textDiv.addEventListener('blur', () => {
@@ -1542,9 +1685,21 @@ function disableTextEditing(el, item) {
     const textDiv = el.querySelector('.editable-text-content');
     if (textDiv) {
         textDiv.contentEditable = 'false';
-        item.content = textDiv.innerText.trim() || ' ';
-        item.width   = el.offsetWidth;
-        item.height  = el.offsetHeight;
+        const rawContent = textDiv.innerText;
+        if (!rawContent || !rawContent.trim()) {
+            item.content = '';
+            item.width = 36;
+            el.style.width = '36px';
+        } else {
+            item.content = rawContent;
+            const fontSize = item.fontSize || textSettings.fontSize || 16;
+            const fontFamily = item.fontFamily || textSettings.fontFamily;
+            const exactW = measureExactTextWidth(item.content, fontSize, fontFamily, item.isBold, item.isItalic);
+            const fitWidth = Math.max(36, Math.ceil(exactW) + 16);
+            item.width = fitWidth;
+            el.style.width = fitWidth + 'px';
+        }
+        item.height = el.offsetHeight;
     }
     el.classList.remove('is-editing');
 }
