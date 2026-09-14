@@ -38,9 +38,11 @@ let dragSrcIndex  = null;
 
 // ─── DOM Event Listeners ───────────────────────────────────────
 document.addEventListener('DOMContentLoaded', () => {
-    const pdfInput    = document.getElementById('pdfInput');
-    const addPdfInput = document.getElementById('addPdfInput');
-    const dropZone    = document.getElementById('uploadSection');
+    const pdfInput      = document.getElementById('pdfInput');
+    const addPdfInput   = document.getElementById('addPdfInput');
+    const dropZone      = document.getElementById('uploadSection');
+    const globalOverlay = document.getElementById('globalDropOverlay');
+    let dragCounter = 0;
 
     if (pdfInput) {
         pdfInput.addEventListener('change', async (e) => {
@@ -60,18 +62,68 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
+    // Helper to check if the dragged object contains real files from OS
+    function hasFiles(e) {
+        if (!e.dataTransfer || !e.dataTransfer.types) return false;
+        return Array.from(e.dataTransfer.types).includes('Files');
+    }
+
+    // ─── Global Window Drag & Drop (Works both on initial screen and active workspace) ───
+    window.addEventListener('dragenter', (e) => {
+        // Ignore internal thumbnail card dragging (dragSrcIndex !== null)
+        if (dragSrcIndex !== null || !hasFiles(e)) return;
+        dragCounter++;
+        if (globalOverlay) {
+            globalOverlay.classList.remove('hidden');
+        }
+    });
+
+    window.addEventListener('dragover', (e) => {
+        if (dragSrcIndex !== null || !hasFiles(e)) return;
+        e.preventDefault();
+        e.dataTransfer.dropEffect = 'copy';
+    });
+
+    window.addEventListener('dragleave', (e) => {
+        if (dragSrcIndex !== null || !hasFiles(e)) return;
+        dragCounter--;
+        if (dragCounter <= 0) {
+            dragCounter = 0;
+            if (globalOverlay) {
+                globalOverlay.classList.add('hidden');
+            }
+        }
+    });
+
+    window.addEventListener('drop', async (e) => {
+        if (dragSrcIndex !== null || !hasFiles(e)) return;
+        e.preventDefault();
+        e.stopPropagation();
+        dragCounter = 0;
+        if (globalOverlay) {
+            globalOverlay.classList.add('hidden');
+        }
+
+        if (e.dataTransfer && e.dataTransfer.files?.length) {
+            const rawFiles = Array.from(e.dataTransfer.files);
+            const pdfFiles = rawFiles.filter(f => f.type === 'application/pdf' || f.name.toLowerCase().endsWith('.pdf'));
+            if (pdfFiles.length) {
+                await loadFiles(pdfFiles);
+            } else {
+                alert('Harap pilih dokumen yang berformat PDF.');
+            }
+        }
+    });
+
+    // Fallback listeners for initial dropzone element
     if (dropZone) {
         dropZone.addEventListener('dragover', (e) => {
-            e.preventDefault();
-            dropZone.classList.add('dragover');
+            if (hasFiles(e)) {
+                e.preventDefault();
+                dropZone.classList.add('dragover');
+            }
         });
         dropZone.addEventListener('dragleave', () => dropZone.classList.remove('dragover'));
-        dropZone.addEventListener('drop', async (e) => {
-            e.preventDefault();
-            dropZone.classList.remove('dragover');
-            const files = Array.from(e.dataTransfer.files).filter(f => f.type === 'application/pdf' || f.name.toLowerCase().endsWith('.pdf'));
-            if (files.length) await loadFiles(files);
-        });
     }
 });
 
